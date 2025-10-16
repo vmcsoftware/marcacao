@@ -1,0 +1,114 @@
+/* Reset e variáveis */
+:root{
+  --bg:#f6f8fb; /* light background */
+  --surface:#ffffff; /* white */
+  --card:#ffffff; /* white cards */
+  --text:#1f2937; /* slate-800 */
+  --muted:#6b7280; /* gray-500 */
+  --primary:#1e88e5;
+  --primary-700:#1565c0;
+  --success:#22c55e;
+  --danger:#ef4444;
+  --border:#e5e7eb; /* light border */
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; font-family:system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Arial, sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* Header */
+.app-header{position:sticky; top:0; background:#fff; border-bottom:1px solid var(--border); box-shadow:0 6px 18px rgba(0,0,0,.06); backdrop-filter:none; z-index:10}
+.app-header .brand{display:flex; align-items:center; gap:.75rem; padding:1rem}
+.brand-icon{width:32px; height:32px}
+.brand h1{margin:0; font-size:1.125rem}
+.brand p{margin:.125rem 0 0; color:var(--muted); font-size:.875rem}
+
+/* Tabs */
+.tabs{display:flex; gap:.5rem; padding:.5rem 1rem; border-top:1px solid var(--border)}
+.tab{display:flex; align-items:center; gap:.5rem; padding:.5rem .75rem; background:#fff; border:1px solid var(--border); border-radius:.5rem; color:var(--text); cursor:pointer}
+.tab:hover{border-color:#cbd5e1; background:#f8fafc}
+.tab.active{background:#e9f3fe; border-color:#67a7e8; color:#0b5ed7}
+.icon{width:20px; height:20px}
+/* Estilo para Bootstrap nav-link nas abas */
+.tabs .nav-link{color:var(--text); border:1px solid var(--border); background:#fff; border-radius:.5rem}
+.tabs .nav-link:hover{background:#f8fafc; border-color:#cbd5e1}
+.tabs .nav-link.active{background:#e9f3fe; border-color:#67a7e8; color:#0b5ed7; box-shadow:0 4px 10px rgba(30,136,229,.15)}
+
+/* Content */
+.content{max-width:1100px; margin:1rem auto; padding:0 1rem}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Cards */
+.card{background:var(--card); border:1px solid var(--border); border-radius:.75rem; padding:1rem; margin-bottom:1rem; box-shadow:0 8px 24px rgba(0,0,0,.06)}
+.card h2{margin-top:0}
+
+/* Forms */
+.form-grid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:1rem}
+.form-grid .full{grid-column:1/-1}
+label{display:flex; flex-direction:column; gap:.375rem; font-size:.95rem}
+input, select, textarea{width:100%; padding:.5rem .75rem; border-radius:.5rem; border:1px solid var(--border); background:#fff; color:var(--text)}
+input:focus, select:focus, textarea:focus{outline:2px solid rgba(30,136,229,.25); border-color:#67a7e8; box-shadow:0 0 0 3px rgba(30,136,229,.08)}
+fieldset{border:1px dashed var(--border); border-radius:.75rem; padding:1rem; background:#fafafa}
+legend{padding:0 .5rem; color:var(--muted)}
+.checks{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:.5rem}
+.grid-2{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:1rem}
+
+/* Repeatable */
+.repeatable{display:flex; flex-direction:column; gap:.5rem}
+.repeatable .row{display:grid; grid-template-columns:1.2fr 1fr .5fr auto; gap:.5rem}
+.repeatable .remove{background:#fff; border:1px solid var(--border); color:#dc2626; border-radius:.5rem; padding:.25rem .5rem; cursor:pointer}
+.repeatable .remove:hover{background:#fee2e2}
+
+/* Buttons */
+/* Ajuste leve para evitar conflito com Bootstrap */
+.btn{display:inline-flex; align-items:center; gap:.5rem}
+.form-actions{display:flex; gap:.5rem}
+
+/* Lists */
+.list{display:flex; flex-direction:column; gap:.75rem}
+.item{display:flex; align-items:flex-start; justify-content:space-between; gap:.75rem; padding:.75rem; border:1px solid var(--border); border-radius:.5rem; background:#fff}
+.item .meta{color:var(--muted); font-size:.85rem}
+
+/* Reports */
+.reports-grid{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:1rem}
+.report{background:#fff; border:1px solid var(--border); border-radius:.5rem; padding:.75rem}
+
+/* Footer */
+.app-footer{padding:1rem; text-align:center; color:var(--muted)}
+
+/* Alert */
+.alert{margin:1rem auto; max-width:1100px; padding:.75rem; border-radius:.5rem; border:1px solid #fde68a; background:#fff7ed; color:#9a3412}
+.alert.hidden{display:none}
+
+/* Toast */
+.toast{position:fixed; right:1rem; bottom:1rem; background:#fff; border:1px solid var(--border); border-radius:.5rem; padding:.75rem 1rem; color:var(--text); box-shadow:0 10px 32px rgba(0,0,0,.12); opacity:0; transform:translateY(10px); transition:all .25s}
+.toast.show{opacity:1; transform:translateY(0)}
+.toast.success{border-color:#86efac}
+.toast.error{border-color:#fecaca}
+
+/* Responsive */
+@media (max-width:900px){
+  .form-grid{grid-template-columns:1fr}
+  .grid-2{grid-template-columns:1fr}
+  .repeatable .row{grid-template-columns:1fr 1fr auto}
+  .reports-grid{grid-template-columns:1fr}
+}
+
+/* Dropdown Menu */
+.dropdown-menu{position:fixed; min-width:220px; background:#fff; border:1px solid var(--border); border-radius:.5rem; box-shadow:0 12px 28px rgba(0,0,0,.12); z-index:1000; padding:.25rem;}
+.dropdown-item{display:flex; align-items:center; gap:.5rem; padding:.5rem .75rem; border-radius:.375rem; color:var(--text); cursor:pointer}
+.dropdown-item:hover{background:#f8fafc}
+.dropdown-sep{height:1px; background:var(--border); margin:.25rem 0}
+.tab-badges{display:inline-flex; gap:.25rem; margin-left:.5rem; vertical-align:middle}
+.tab-badge{display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 .25rem; border-radius:10px; font-size:.75rem; color:#fff}
+.badge-anciao{background:#0ea5e9}
+.badge-anciao-resp{background:#0284c7}
+.badge-diacono{background:#22c55e}
+.badge-diacono-resp{background:#16a34a}
+.badge-cooperador{background:#f59e0b} /* amber-500 */
+.badge-cooperador-jovens{background:#8b5cf6} /* violet-500 */
+.hidden{display:none}
