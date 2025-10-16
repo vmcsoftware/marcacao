@@ -132,6 +132,7 @@
   const listaEventos = qs('#lista-eventos');
   const eventoCong = qs('#evento-congregacao');
   const eventoAtendente = qs('#evento-atendente');
+  const minCongSel = qs('#min-congregacao');
   if(formEvento){
     formEvento.addEventListener('submit', async (e)=>{
       e.preventDefault();
@@ -147,15 +148,21 @@
         const opt = eventoAtendente.querySelector(`option[value="${data.atendenteId}"]`);
         atendenteNome = opt ? opt.textContent : '';
       }
-      const saved = await write('eventos', {
-        tipo: data.tipo,
-        data: data.data,
-        congregacaoId: data.congregacaoId,
-        atendenteId: data.atendenteId,
-        atendenteNome: atendenteNome,
-        observacoes: data.observacoes||''
-      });
-      if(saved){ toast('Evento salvo'); formEvento.reset(); }
+      try{
+        const saved = await write('eventos', {
+          tipo: data.tipo,
+          data: data.data,
+          congregacaoId: data.congregacaoId,
+          atendenteId: data.atendenteId,
+          atendenteNome: atendenteNome,
+          observacoes: data.observacoes||''
+        });
+        if(saved){ toast('Evento salvo'); formEvento.reset(); }
+      }catch(err){
+        console.error(err);
+        const msg = (err && (err.code||err.message)) || 'Falha ao salvar evento';
+        toast(msg, 'error');
+      }
     });
 
     readList('eventos', list => {
@@ -179,11 +186,19 @@
   function fillSelect(sel, list, labelKey){
     if(!sel) return;
     sel.innerHTML = '<option value="">Selecionar...</option>' +
-      list.map(x => `<option value="${x.id}">${x[labelKey]||x.nomeFormatado||x.nome}</option>`).join('');
+      list.map(x => {
+        const label = x[labelKey] || x.nomeFormatado || (x.cidade && x.bairro ? `${x.cidade} - ${x.bairro}` : (x.nome||''));
+        return `<option value="${x.id}">${label}</option>`;
+      }).join('');
   }
   if(eventoCong){
     readList('congregacoes', list => {
       fillSelect(eventoCong, list, 'nomeFormatado');
+    });
+  }
+  if(minCongSel){
+    readList('congregacoes', list => {
+      fillSelect(minCongSel, list, 'nomeFormatado');
     });
   }
 
@@ -207,6 +222,16 @@
   const congDiaconoSel = qs('#cong-diacono');
   const badgeCO = qs('#badge-cooperador-oficial');
   const badgeCJ = qs('#badge-cooperador-jovens');
+  const listaMin = qs('#lista-ministerio');
+  let congLabelById = {};
+  // Cache de rótulos de congregações para exibir nos listados
+  readList('congregacoes', list => {
+    congLabelById = {};
+    list.forEach(c => {
+      const label = c.nomeFormatado || (c.cidade && c.bairro ? `${c.cidade} - ${c.bairro}` : (c.nome||''));
+      congLabelById[c.id] = label;
+    });
+  });
 
   // Popular selects de Ancião/Diácono com base no Ministério
   function populateMinistrySelect(sel, list, filterFn){
@@ -228,6 +253,26 @@
 
     populateMinistrySelect(congAnciaoSel, list, m=>m.funcao==='Ancião');
     populateMinistrySelect(congDiaconoSel, list, m=>m.funcao==='Diácono');
+
+    // Listar Ministério
+    if(listaMin){
+      // Ordenar por nome
+      const sorted = [...list].sort((a,b)=> (a.nome||'').localeCompare(b.nome||''));
+      listaMin.innerHTML = sorted.map(m => {
+        const congLabel = m.congregacaoId ? (congLabelById[m.congregacaoId] || m.congregacaoId) : '';
+        return `
+          <div class="item">
+            <div>
+              <strong>${m.nome}</strong>
+              <div class="meta">Função: ${m.funcao||'-'}</div>
+              ${congLabel?`<div class="meta">Congregação: ${congLabel}</div>`:''}
+              ${m.telefone?`<div class="meta">Tel: ${m.telefone}</div>`:''}
+              ${m.email?`<div class="meta">E-mail: ${m.email}</div>`:''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
   });
 
   // Salvar Congregação
@@ -243,14 +288,20 @@
       const anciaoNome = ministryCache.find(m=>m.id===anciaoId)?.nome || '';
       const diaconoNome = ministryCache.find(m=>m.id===diaconoId)?.nome || '';
 
-      const saved = await write('congregacoes', {
-        cidade: data.cidade,
-        bairro: data.bairro,
-        endereco: data.endereco,
-        anciaoId, anciaoTipo, anciaoNome,
-        diaconoId, diaconoTipo, diaconoNome,
-      });
-      if(saved){ toast('Congregação salva'); formCong.reset(); }
+      try{
+        const saved = await write('congregacoes', {
+          cidade: data.cidade,
+          bairro: data.bairro,
+          endereco: data.endereco,
+          anciaoId, anciaoTipo, anciaoNome,
+          diaconoId, diaconoTipo, diaconoNome,
+        });
+        if(saved){ toast('Congregação salva'); formCong.reset(); }
+      }catch(err){
+        console.error(err);
+        const msg = (err && (err.code||err.message)) || 'Falha ao salvar congregação';
+        toast(msg, 'error');
+      }
     });
 
     readList('congregacoes', list => {
@@ -265,6 +316,36 @@
           </div>
         </div>
       `).join('');
+    });
+  }
+
+  // Salvar Ministério
+  const formMin = qs('#form-ministerio');
+  if(formMin){
+    formMin.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const fd = new FormData(formMin);
+      const data = Object.fromEntries(fd.entries());
+      if(!data.nome || !data.funcao){ toast('Preencha nome e função', 'error'); return; }
+      const payload = {
+        nome: data.nome,
+        funcao: data.funcao,
+        congregacaoId: data.congregacaoId||'',
+        telefone: data.telefone||'',
+        email: data.email||'',
+        anciaoLocal: !!data.anciaoLocal,
+        anciaoResponsavel: !!data.anciaoResponsavel,
+        diaconoLocal: !!data.diaconoLocal,
+        diaconoResponsavel: !!data.diaconoResponsavel,
+      };
+      try{
+        const saved = await write('ministerio', payload);
+        if(saved){ toast('Irmão do Ministério salvo'); formMin.reset(); }
+      }catch(err){
+        console.error(err);
+        const msg = (err && (err.code||err.message)) || 'Falha ao salvar Ministério';
+        toast(msg, 'error');
+      }
     });
   }
 }());
