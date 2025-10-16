@@ -229,6 +229,60 @@
   const badgeCO = qs('#badge-cooperador-oficial');
   const badgeCJ = qs('#badge-cooperador-jovens');
   const listaMin = qs('#lista-ministerio');
+  // Horários de Cultos (CO/RJM)
+  const cultosWrapper = qs('#cultos-wrapper');
+  const addCultoBtn = qs('#add-culto');
+  const diasSemana = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  function createCultoRow(initial={}){
+    const { tipo='Culto Oficial', dia='Domingo', horario='' } = initial;
+    const row = document.createElement('div');
+    row.className = 'culto-row grid-3';
+    row.innerHTML = `
+      <label>
+        Tipo
+        <select name="cultoTipo">
+          <option value="Culto Oficial">Culto Oficial</option>
+          <option value="RJM">RJM</option>
+        </select>
+      </label>
+      <label>
+        Dia da semana
+        <select name="cultoDia">
+          ${diasSemana.map(d=>`<option value="${d}">${d}</option>`).join('')}
+        </select>
+      </label>
+      <label>
+        Horário
+        <input type="time" name="cultoHorario" />
+      </label>
+      <div class="form-actions">
+        <button type="button" class="btn btn-sm btn-outline-danger culto-remove" title="Remover horário">Remover</button>
+      </div>
+    `;
+    const selTipo = row.querySelector('select[name="cultoTipo"]');
+    const selDia = row.querySelector('select[name="cultoDia"]');
+    const inpHor = row.querySelector('input[name="cultoHorario"]');
+    if(selTipo) selTipo.value = tipo;
+    if(selDia) selDia.value = dia;
+    if(inpHor) inpHor.value = horario;
+    const rm = row.querySelector('.culto-remove');
+    rm && rm.addEventListener('click', ()=> row.remove());
+    return row;
+  }
+  function collectCultos(){
+    if(!cultosWrapper) return [];
+    return Array.from(cultosWrapper.querySelectorAll('.culto-row')).map(row=>{
+      const tipo = row.querySelector('select[name="cultoTipo"]')?.value||'';
+      const dia = row.querySelector('select[name="cultoDia"]')?.value||'';
+      const horario = row.querySelector('input[name="cultoHorario"]')?.value||'';
+      return { tipo, dia, horario };
+    }).filter(c=> c.tipo && c.dia && c.horario);
+  }
+  if(addCultoBtn && cultosWrapper){
+    addCultoBtn.addEventListener('click', ()=>{
+      cultosWrapper.appendChild(createCultoRow({ tipo:'Culto Oficial', dia:'Domingo', horario:'' }));
+    });
+  }
   let congLabelById = {};
   let congregacoesCache = [];
   // Cache de rótulos de congregações para exibir nos listados
@@ -393,6 +447,7 @@
       if(!data.cidade || !data.bairro || !data.endereco){ toast('Preencha cidade, bairro e endereço', 'error'); return; }
       const anciaoId = data.anciaoId||''; const anciaoTipo = data.anciaoTipo||'';
       const diaconoId = data.diaconoId||''; const diaconoTipo = data.diaconoTipo||'';
+      const cultos = collectCultos();
 
       const anciaoNome = ministryCache.find(m=>m.id===anciaoId)?.nome || '';
       const diaconoNome = ministryCache.find(m=>m.id===diaconoId)?.nome || '';
@@ -406,6 +461,7 @@
             endereco: data.endereco,
             anciaoId, anciaoTipo, anciaoNome,
             diaconoId, diaconoTipo, diaconoNome,
+            cultos,
           });
           if(updated){ toast('Congregação atualizada'); await autoLinkMinisterioFromCongregacao({ id: editId, ...updated }); formCong.reset(); }
         } else {
@@ -415,6 +471,7 @@
             endereco: data.endereco,
             anciaoId, anciaoTipo, anciaoNome,
             diaconoId, diaconoTipo, diaconoNome,
+            cultos,
           });
           if(saved){ toast('Congregação salva'); await autoLinkMinisterioFromCongregacao(saved); formCong.reset(); }
         }
@@ -435,6 +492,8 @@
             <div class="meta">Endereço: ${c.endereco}</div>
             <div class="meta">Ancião: ${c.anciaoNome||'-'} ${c.anciaoTipo?`(${c.anciaoTipo})`:''}</div>
             <div class="meta">Diácono: ${c.diaconoNome||'-'} ${c.diaconoTipo?`(${c.diaconoTipo})`:''}</div>
+            ${((c.cultos||[]).filter(x=>x.tipo==='Culto Oficial').length)?`<div class="meta">Cultos Oficiais: ${(c.cultos||[]).filter(x=>x.tipo==='Culto Oficial').map(x=>`${x.dia} ${x.horario}`).join(', ')}</div>`:''}
+            ${((c.cultos||[]).filter(x=>x.tipo==='RJM').length)?`<div class="meta">RJM: ${(c.cultos||[]).filter(x=>x.tipo==='RJM').map(x=>`${x.dia} ${x.horario}`).join(', ')}</div>`:''}
           </div>
           <div>
             <button class="btn btn-sm btn-outline-secondary" data-action="edit-cong" data-id="${c.id}">Editar</button>
@@ -462,6 +521,10 @@
       if(anTipo) anTipo.value = c.anciaoTipo||'';
       if(diSel) diSel.value = c.diaconoId||'';
       if(diTipo) diTipo.value = c.diaconoTipo||'';
+      if(cultosWrapper){
+        cultosWrapper.innerHTML = '';
+        (c.cultos||[]).forEach(ct=> cultosWrapper.appendChild(createCultoRow(ct)));
+      }
     }
     if(listaCong){
       listaCong.addEventListener('click', (e)=>{
@@ -477,6 +540,7 @@
         const resetBtn = formCong.querySelector('button[type="reset"]');
         if(submitBtn) submitBtn.textContent = 'Salvar Congregação';
         if(resetBtn) resetBtn.textContent = 'Limpar';
+        if(cultosWrapper) cultosWrapper.innerHTML = '';
       });
     }
   }
