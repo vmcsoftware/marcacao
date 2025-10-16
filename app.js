@@ -489,6 +489,22 @@
       if(!listaCong) return;
       const list = congregacoesCache || [];
       listaCong.innerHTML = list.map(c => {
+        // Listar todos Anciães e Diáconos vinculados à congregação
+        const elders = (ministryCache||[])
+          .filter(m => m.congregacaoId===c.id && m.funcao==='Ancião')
+          .map(m => {
+            const name = m.nome || '';
+            return m.anciaoLocal
+              ? `<strong>${name}</strong>`
+              : (m.anciaoResponsavel ? `<i>${name}</i>` : name);
+          })
+          .join(', ');
+        const deacons = (ministryCache||[])
+          .filter(m => m.congregacaoId===c.id && m.funcao==='Diácono')
+          .map(m => `${m.nome}${m.diaconoResponsavel?' (responsável)': (m.diaconoLocal?' (local)':'')}`)
+          .join(', ');
+        const eldersLine = elders ? `<div class="meta">Anciães: ${elders}</div>` : '';
+        const deaconsLine = deacons ? `<div class="meta">Diáconos: ${deacons}</div>` : '';
         const coNames = (ministryCache||[])
           .filter(m => m.congregacaoId===c.id && m.funcao==='Cooperador Oficial')
           .map(m => m.nome).join(', ');
@@ -510,6 +526,8 @@
               <div class="meta">Endereço: ${c.endereco}</div>
               <div class="meta">Ancião: ${c.anciaoNome||'-'} ${c.anciaoTipo?`(${c.anciaoTipo})`:''}</div>
               <div class="meta">Diácono: ${c.diaconoNome||'-'} ${c.diaconoTipo?`(${c.diaconoTipo})`:''}</div>
+              ${eldersLine}
+              ${deaconsLine}
               ${coLine}
               ${cjLine}
               ${cultosOficiais}
