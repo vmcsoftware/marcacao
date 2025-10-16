@@ -338,6 +338,8 @@
         `;
       }).join('');
     }
+    // Atualizar a lista de congregações para refletir cooperadores por congregação
+    if(listaCong){ renderCongList(); }
   });
 
   // Vincular automaticamente Congregação quando salvar/editar Ministério
@@ -482,24 +484,49 @@
       }
     });
 
+    // Render da lista de congregações incluindo Cooperadores
+    function renderCongList(){
+      if(!listaCong) return;
+      const list = congregacoesCache || [];
+      listaCong.innerHTML = list.map(c => {
+        const coNames = (ministryCache||[])
+          .filter(m => m.congregacaoId===c.id && m.funcao==='Cooperador Oficial')
+          .map(m => m.nome).join(', ');
+        const cjNames = (ministryCache||[])
+          .filter(m => m.congregacaoId===c.id && m.funcao==='Cooperador de Jovens')
+          .map(m => m.nome).join(', ');
+        const coLine = coNames ? `<div class="meta">Cooperadores Oficiais: ${coNames}</div>` : '';
+        const cjLine = cjNames ? `<div class="meta">Cooperadores de Jovens: ${cjNames}</div>` : '';
+        const cultosOficiais = ((c.cultos||[]).filter(x=>x.tipo==='Culto Oficial').length)
+          ? `<div class="meta">Cultos Oficiais: ${(c.cultos||[]).filter(x=>x.tipo==='Culto Oficial').map(x=>`${x.dia} ${x.horario}`).join(', ')}</div>`
+          : '';
+        const cultosRjm = ((c.cultos||[]).filter(x=>x.tipo==='RJM').length)
+          ? `<div class="meta">RJM: ${(c.cultos||[]).filter(x=>x.tipo==='RJM').map(x=>`${x.dia} ${x.horario}`).join(', ')}</div>`
+          : '';
+        return `
+          <div class="item">
+            <div>
+              <strong>${c.cidade} - ${c.bairro}</strong>
+              <div class="meta">Endereço: ${c.endereco}</div>
+              <div class="meta">Ancião: ${c.anciaoNome||'-'} ${c.anciaoTipo?`(${c.anciaoTipo})`:''}</div>
+              <div class="meta">Diácono: ${c.diaconoNome||'-'} ${c.diaconoTipo?`(${c.diaconoTipo})`:''}</div>
+              ${coLine}
+              ${cjLine}
+              ${cultosOficiais}
+              ${cultosRjm}
+            </div>
+            <div>
+              <button class="btn btn-sm btn-outline-secondary" data-action="edit-cong" data-id="${c.id}">Editar</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
     readList('congregacoes', list => {
       if(!listaCong) return;
       congregacoesCache = list;
-      listaCong.innerHTML = list.map(c => `
-        <div class="item">
-          <div>
-            <strong>${c.cidade} - ${c.bairro}</strong>
-            <div class="meta">Endereço: ${c.endereco}</div>
-            <div class="meta">Ancião: ${c.anciaoNome||'-'} ${c.anciaoTipo?`(${c.anciaoTipo})`:''}</div>
-            <div class="meta">Diácono: ${c.diaconoNome||'-'} ${c.diaconoTipo?`(${c.diaconoTipo})`:''}</div>
-            ${((c.cultos||[]).filter(x=>x.tipo==='Culto Oficial').length)?`<div class="meta">Cultos Oficiais: ${(c.cultos||[]).filter(x=>x.tipo==='Culto Oficial').map(x=>`${x.dia} ${x.horario}`).join(', ')}</div>`:''}
-            ${((c.cultos||[]).filter(x=>x.tipo==='RJM').length)?`<div class="meta">RJM: ${(c.cultos||[]).filter(x=>x.tipo==='RJM').map(x=>`${x.dia} ${x.horario}`).join(', ')}</div>`:''}
-          </div>
-          <div>
-            <button class="btn btn-sm btn-outline-secondary" data-action="edit-cong" data-id="${c.id}">Editar</button>
-          </div>
-        </div>
-      `).join('');
+      renderCongList();
     });
 
     // Editar Congregação: carregar dados no formulário
