@@ -286,6 +286,63 @@
     }
   });
 
+  // Vincular automaticamente Congregação quando salvar/editar Ministério
+  async function autoLinkCongregacaoWithMinisterio(m){
+    try{
+      if(!m || !m.congregacaoId) return;
+      const updates = {};
+      if(m.funcao === 'Ancião'){
+        const tipo = m.anciaoResponsavel ? 'responsavel' : (m.anciaoLocal ? 'local' : '');
+        updates.anciaoId = m.id;
+        updates.anciaoNome = m.nome || '';
+        updates.anciaoTipo = tipo;
+      } else if(m.funcao === 'Diácono'){
+        const tipo = m.diaconoResponsavel ? 'responsavel' : (m.diaconoLocal ? 'local' : '');
+        updates.diaconoId = m.id;
+        updates.diaconoNome = m.nome || '';
+        updates.diaconoTipo = tipo;
+      } else {
+        return;
+      }
+      const res = await update('congregacoes', m.congregacaoId, updates);
+      if(res){ toast('Congregação vinculada ao Ministério'); }
+    }catch(err){
+      console.error(err);
+      const msg = (err && (err.code||err.message)) || 'Falha ao vincular congregação';
+      toast(msg, 'error');
+    }
+  }
+
+  // Vincular automaticamente Ministério quando salvar/editar Congregação
+  async function autoLinkMinisterioFromCongregacao(c){
+    try{
+      if(!c || !c.id) return;
+      const ops = [];
+      if(c.anciaoId){
+        ops.push(update('ministerio', c.anciaoId, {
+          congregacaoId: c.id,
+          anciaoLocal: c.anciaoTipo === 'local',
+          anciaoResponsavel: c.anciaoTipo === 'responsavel',
+        }));
+      }
+      if(c.diaconoId){
+        ops.push(update('ministerio', c.diaconoId, {
+          congregacaoId: c.id,
+          diaconoLocal: c.diaconoTipo === 'local',
+          diaconoResponsavel: c.diaconoTipo === 'responsavel',
+        }));
+      }
+      if(ops.length){
+        await Promise.all(ops);
+        toast('Ministério vinculado à congregação');
+      }
+    }catch(err){
+      console.error(err);
+      const msg = (err && (err.code||err.message)) || 'Falha ao vincular Ministério';
+      toast(msg, 'error');
+    }
+  }
+
   // Editar Ministério: delegar clique e carregar no formulário
   if(listaMin){
     listaMin.addEventListener('click', (e)=>{
@@ -350,7 +407,7 @@
             anciaoId, anciaoTipo, anciaoNome,
             diaconoId, diaconoTipo, diaconoNome,
           });
-          if(updated){ toast('Congregação atualizada'); formCong.reset(); }
+          if(updated){ toast('Congregação atualizada'); await autoLinkMinisterioFromCongregacao({ id: editId, ...updated }); formCong.reset(); }
         } else {
           const saved = await write('congregacoes', {
             cidade: data.cidade,
@@ -359,7 +416,7 @@
             anciaoId, anciaoTipo, anciaoNome,
             diaconoId, diaconoTipo, diaconoNome,
           });
-          if(saved){ toast('Congregação salva'); formCong.reset(); }
+          if(saved){ toast('Congregação salva'); await autoLinkMinisterioFromCongregacao(saved); formCong.reset(); }
         }
       }catch(err){
         console.error(err);
@@ -447,10 +504,10 @@
         const editId = formMin.dataset.editId;
         if(editId){
           const updated = await update('ministerio', editId, payload);
-          if(updated){ toast('Irmão do Ministério atualizado'); formMin.reset(); }
+          if(updated){ toast('Irmão do Ministério atualizado'); await autoLinkCongregacaoWithMinisterio({ id: editId, ...payload }); formMin.reset(); }
         } else {
           const saved = await write('ministerio', payload);
-          if(saved){ toast('Irmão do Ministério salvo'); formMin.reset(); }
+          if(saved){ toast('Irmão do Ministério salvo'); await autoLinkCongregacaoWithMinisterio(saved); formMin.reset(); }
         }
       }catch(err){
         console.error(err);
