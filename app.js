@@ -118,6 +118,12 @@
     const data = { id: ref.key, createdAt: Date.now(), ...obj };
     return ref.set(data).then(()=> data);
   }
+  function update(path, id, obj){
+    if(!db){ toast('Firebase não configurado', 'error'); return Promise.resolve(null); }
+    const ref = db.ref(`${path}/${id}`);
+    const data = { ...obj, updatedAt: Date.now() };
+    return ref.update(data).then(()=> ({ id, ...data }));
+  }
   function readList(path, cb){
     if(!db) return;
     db.ref(path).on('value', snap => {
@@ -224,8 +230,10 @@
   const badgeCJ = qs('#badge-cooperador-jovens');
   const listaMin = qs('#lista-ministerio');
   let congLabelById = {};
+  let congregacoesCache = [];
   // Cache de rótulos de congregações para exibir nos listados
   readList('congregacoes', list => {
+    congregacoesCache = list;
     congLabelById = {};
     list.forEach(c => {
       const label = c.nomeFormatado || (c.cidade && c.bairro ? `${c.cidade} - ${c.bairro}` : (c.nome||''));
@@ -269,11 +277,55 @@
               ${m.telefone?`<div class="meta">Tel: ${m.telefone}</div>`:''}
               ${m.email?`<div class="meta">E-mail: ${m.email}</div>`:''}
             </div>
+            <div>
+              <button class="btn btn-sm btn-outline-secondary" data-action="edit-min" data-id="${m.id}">Editar</button>
+            </div>
           </div>
         `;
       }).join('');
     }
   });
+
+  // Editar Ministério: delegar clique e carregar no formulário
+  if(listaMin){
+    listaMin.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button[data-action="edit-min"]');
+      if(!btn) return;
+      const id = btn.getAttribute('data-id');
+      const m = ministryCache.find(x=>x.id===id);
+      if(!m) return;
+      const formMinEl = qs('#form-ministerio');
+      if(!formMinEl) return;
+      formMinEl.dataset.editId = m.id;
+      const submitBtn = formMinEl.querySelector('button[type="submit"]');
+      const resetBtn = formMinEl.querySelector('button[type="reset"]');
+      if(submitBtn) submitBtn.textContent = 'Atualizar Irmão';
+      if(resetBtn) resetBtn.textContent = 'Cancelar Edição';
+      formMinEl.querySelector('input[name="nome"]').value = m.nome||'';
+      const funcSel = formMinEl.querySelector('select[name="funcao"]');
+      if(funcSel) funcSel.value = m.funcao||'';
+      const congSel = formMinEl.querySelector('select[name="congregacaoId"]');
+      if(congSel) congSel.value = m.congregacaoId||'';
+      formMinEl.querySelector('input[name="telefone"]').value = m.telefone||'';
+      formMinEl.querySelector('input[name="email"]').value = m.email||'';
+      const al = formMinEl.querySelector('input[name="anciaoLocal"]');
+      const ar = formMinEl.querySelector('input[name="anciaoResponsavel"]');
+      const dl = formMinEl.querySelector('input[name="diaconoLocal"]');
+      const dr = formMinEl.querySelector('input[name="diaconoResponsavel"]');
+      if(al) al.checked = !!m.anciaoLocal;
+      if(ar) ar.checked = !!m.anciaoResponsavel;
+      if(dl) dl.checked = !!m.diaconoLocal;
+      if(dr) dr.checked = !!m.diaconoResponsavel;
+    });
+    const formMinResetEl = qs('#form-ministerio');
+    formMinResetEl && formMinResetEl.addEventListener('reset', ()=>{
+      delete formMinResetEl.dataset.editId;
+      const submitBtn = formMinResetEl.querySelector('button[type="submit"]');
+      const resetBtn = formMinResetEl.querySelector('button[type="reset"]');
+      if(submitBtn) submitBtn.textContent = 'Salvar Irmão do Ministério';
+      if(resetBtn) resetBtn.textContent = 'Limpar';
+    });
+  }
 
   // Salvar Congregação
   if(formCong){
@@ -289,14 +341,26 @@
       const diaconoNome = ministryCache.find(m=>m.id===diaconoId)?.nome || '';
 
       try{
-        const saved = await write('congregacoes', {
-          cidade: data.cidade,
-          bairro: data.bairro,
-          endereco: data.endereco,
-          anciaoId, anciaoTipo, anciaoNome,
-          diaconoId, diaconoTipo, diaconoNome,
-        });
-        if(saved){ toast('Congregação salva'); formCong.reset(); }
+        const editId = formCong.dataset.editId;
+        if(editId){
+          const updated = await update('congregacoes', editId, {
+            cidade: data.cidade,
+            bairro: data.bairro,
+            endereco: data.endereco,
+            anciaoId, anciaoTipo, anciaoNome,
+            diaconoId, diaconoTipo, diaconoNome,
+          });
+          if(updated){ toast('Congregação atualizada'); formCong.reset(); }
+        } else {
+          const saved = await write('congregacoes', {
+            cidade: data.cidade,
+            bairro: data.bairro,
+            endereco: data.endereco,
+            anciaoId, anciaoTipo, anciaoNome,
+            diaconoId, diaconoTipo, diaconoNome,
+          });
+          if(saved){ toast('Congregação salva'); formCong.reset(); }
+        }
       }catch(err){
         console.error(err);
         const msg = (err && (err.code||err.message)) || 'Falha ao salvar congregação';
@@ -306,6 +370,7 @@
 
     readList('congregacoes', list => {
       if(!listaCong) return;
+      congregacoesCache = list;
       listaCong.innerHTML = list.map(c => `
         <div class="item">
           <div>
@@ -314,9 +379,49 @@
             <div class="meta">Ancião: ${c.anciaoNome||'-'} ${c.anciaoTipo?`(${c.anciaoTipo})`:''}</div>
             <div class="meta">Diácono: ${c.diaconoNome||'-'} ${c.diaconoTipo?`(${c.diaconoTipo})`:''}</div>
           </div>
+          <div>
+            <button class="btn btn-sm btn-outline-secondary" data-action="edit-cong" data-id="${c.id}">Editar</button>
+          </div>
         </div>
       `).join('');
     });
+
+    // Editar Congregação: carregar dados no formulário
+    function startEditCongregacao(c){
+      if(!formCong || !c) return;
+      formCong.dataset.editId = c.id;
+      const submitBtn = formCong.querySelector('button[type="submit"]');
+      const resetBtn = formCong.querySelector('button[type="reset"]');
+      if(submitBtn) submitBtn.textContent = 'Atualizar Congregação';
+      if(resetBtn) resetBtn.textContent = 'Cancelar Edição';
+      formCong.querySelector('input[name="cidade"]').value = c.cidade||'';
+      formCong.querySelector('input[name="bairro"]').value = c.bairro||'';
+      formCong.querySelector('input[name="endereco"]').value = c.endereco||'';
+      const anSel = formCong.querySelector('select[name="anciaoId"]');
+      const anTipo = formCong.querySelector('select[name="anciaoTipo"]');
+      const diSel = formCong.querySelector('select[name="diaconoId"]');
+      const diTipo = formCong.querySelector('select[name="diaconoTipo"]');
+      if(anSel) anSel.value = c.anciaoId||'';
+      if(anTipo) anTipo.value = c.anciaoTipo||'';
+      if(diSel) diSel.value = c.diaconoId||'';
+      if(diTipo) diTipo.value = c.diaconoTipo||'';
+    }
+    if(listaCong){
+      listaCong.addEventListener('click', (e)=>{
+        const btn = e.target.closest('button[data-action="edit-cong"]');
+        if(!btn) return;
+        const id = btn.getAttribute('data-id');
+        const c = congregacoesCache.find(x=>x.id===id);
+        startEditCongregacao(c);
+      });
+      formCong && formCong.addEventListener('reset', ()=>{
+        delete formCong.dataset.editId;
+        const submitBtn = formCong.querySelector('button[type="submit"]');
+        const resetBtn = formCong.querySelector('button[type="reset"]');
+        if(submitBtn) submitBtn.textContent = 'Salvar Congregação';
+        if(resetBtn) resetBtn.textContent = 'Limpar';
+      });
+    }
   }
 
   // Salvar Ministério
@@ -339,8 +444,14 @@
         diaconoResponsavel: !!data.diaconoResponsavel,
       };
       try{
-        const saved = await write('ministerio', payload);
-        if(saved){ toast('Irmão do Ministério salvo'); formMin.reset(); }
+        const editId = formMin.dataset.editId;
+        if(editId){
+          const updated = await update('ministerio', editId, payload);
+          if(updated){ toast('Irmão do Ministério atualizado'); formMin.reset(); }
+        } else {
+          const saved = await write('ministerio', payload);
+          if(saved){ toast('Irmão do Ministério salvo'); formMin.reset(); }
+        }
       }catch(err){
         console.error(err);
         const msg = (err && (err.code||err.message)) || 'Falha ao salvar Ministério';
