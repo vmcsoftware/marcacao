@@ -199,12 +199,19 @@
         const opt = eventoAtendente.querySelector(`option[value="${data.atendenteId}"]`);
         atendenteNome = opt ? opt.textContent : '';
       }
+      // Encontrar nome formatado da congregação selecionada (denormalização)
+      let congregacaoNome = '';
+      if(eventoCong){
+        const congOpt = eventoCong.querySelector(`option[value="${data.congregacaoId}"]`);
+        congregacaoNome = congOpt ? congOpt.textContent : '';
+      }
       try{
         if(editId){
           const res = await update('eventos', editId, {
             tipo: data.tipo,
             data: data.data,
             congregacaoId: data.congregacaoId,
+            congregacaoNome: congregacaoNome,
             atendenteId: data.atendenteId,
             atendenteNome: atendenteNome,
             observacoes: data.observacoes||''
@@ -215,6 +222,7 @@
             tipo: data.tipo,
             data: data.data,
             congregacaoId: data.congregacaoId,
+            congregacaoNome: congregacaoNome,
             atendenteId: data.atendenteId,
             atendenteNome: atendenteNome,
             observacoes: data.observacoes||''
@@ -238,12 +246,15 @@
     readList('eventos', list => {
       eventosCache = list;
       if(!listaEventos) return;
-      listaEventos.innerHTML = list.map(ev => `
+      listaEventos.innerHTML = list.map(ev => {
+        const congObj = congregacoesByIdEvents[ev.congregacaoId];
+        const congLabel = ev.congregacaoNome || (congObj ? (congObj.nomeFormatado || (congObj.cidade && congObj.bairro ? `${congObj.cidade} - ${congObj.bairro}` : (congObj.nome||ev.congregacaoId))) : ev.congregacaoId);
+        return `
         <div class="item">
           <div>
             <strong>${ev.tipo}</strong>
             <div class="meta">Data: ${formatDate(ev.data)}</div>
-            <div class="meta">Congregação: ${ev.congregacaoId}</div>
+            <div class="meta">Congregação: ${congLabel}</div>
             <div class="meta">Atendido por: ${ev.atendenteNome||'-'}</div>
             ${ev.observacoes?`<div class="meta">Obs: ${ev.observacoes}</div>`:''}
           </div>
@@ -252,7 +263,7 @@
             <button class="btn btn-sm btn-outline-danger" data-action="delete-ev" data-id="${ev.id}">Excluir</button>
           </div>
         </div>
-      `).join('');
+      `}).join('');
       renderTabelaReforcos();
     });
     if(listaEventos){
@@ -804,7 +815,7 @@
       const d = new Date(ev.data);
       const diaNome = diasSemanaPt[d.getDay()];
       const cong = congregacoesByIdEvents[ev.congregacaoId];
-      const localLabel = cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId;
+      const localLabel = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
       const tipoCulto = ev.tipo==='Culto Reforço de Coletas' ? 'Culto Oficial' : (ev.tipo==='RJM com Reforço de Coletas' ? 'RJM' : '');
       let hora = '-';
       if(cong && Array.isArray(cong.cultos)){
