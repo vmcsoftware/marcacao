@@ -30,6 +30,7 @@
   <!-- Firebase SDK (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 <body class="bg-light">
   <header class="app-header bg-white shadow-sm">
@@ -216,7 +217,75 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
   <script>
-    // Nenhuma restrição de acesso aqui; é apenas leitura pública
+    (function(){
+      function showOverlay(message, showLogin){
+        let ov = document.getElementById('access-overlay');
+        if(!ov){
+          ov = document.createElement('div');
+          ov.id = 'access-overlay';
+          ov.className = 'access-overlay';
+          ov.innerHTML = '<div class="access-card"><h3>Acesso restrito</h3><p class="access-msg"></p><div class="access-actions"></div></div>';
+          document.body.appendChild(ov);
+        }
+        const msgEl = ov.querySelector('.access-msg');
+        if(msgEl) msgEl.textContent = message || 'Esta página é restrita.';
+        const actions = ov.querySelector('.access-actions');
+        if(actions) actions.innerHTML = '';
+        if(showLogin && window.firebase && firebase.auth){
+          const btn = document.createElement('button');
+          btn.className = 'btn btn-primary';
+          btn.textContent = 'Entrar com Google';
+          btn.addEventListener('click', async ()=>{
+            try{
+              const provider = new firebase.auth.GoogleAuthProvider();
+              const res = await firebase.auth().signInWithPopup(provider);
+              const email = (res.user && res.user.email) ? res.user.email.toLowerCase() : '';
+              if(email === 'viniciuscarvalhoccb@gmail.com'){
+                ov.remove();
+              } else {
+                showOverlay('Acesso negado para este usuário.', false);
+                await firebase.auth().signOut();
+              }
+            }catch(err){
+              console.error(err);
+              if(err && err.code === 'auth/unauthorized-domain'){
+                const host = location.hostname;
+                showOverlay(`Domínio não autorizado (${host}). Autorize este domínio em Firebase Console > Authentication > Settings > Authorized domains (adicione também localhost/127.0.0.1 se necessário).`, false);
+              } else if(err && (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user')){
+                showOverlay('Popup de login bloqueado/fechado. Permita pop-ups e tente novamente.', true);
+              } else {
+                showOverlay('Falha ao autenticar. Tente novamente.', true);
+              }
+            }
+          });
+          actions && actions.appendChild(btn);
+        }
+      }
+      function enforce(){
+        try{
+          if(!window.firebase || !firebase.auth){
+            showOverlay('Configuração de autenticação ausente. Contate o administrador.', false);
+            return;
+          }
+          firebase.auth().onAuthStateChanged(user=>{
+            if(!user){
+              showOverlay('Faça login com Google para acessar.', true);
+              return;
+            }
+            const email = (user.email||'').toLowerCase();
+            if(email === 'viniciuscarvalhoccb@gmail.com'){
+              const ov = document.getElementById('access-overlay'); ov && ov.remove();
+            } else {
+              showOverlay('Acesso negado para este usuário.', false);
+            }
+          });
+        }catch(err){
+          console.error(err);
+          showOverlay('Erro ao verificar acesso.', true);
+        }
+      }
+      enforce();
+    })();
   </script>
 </body>
 </html>
