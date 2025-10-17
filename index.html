@@ -13,28 +13,26 @@
 <body class="bg-light">
   <header class="app-header bg-white shadow-sm">
     <div class="brand">
-      <svg viewBox="0 0 24 24" aria-hidden="true" class="brand-icon">
-        <path d="M12 2l4 7h7l-5.5 4 2.1 7L12 16l-7.6 4 2.1-7L1 9h7z" fill="#1e88e5"/>
-      </svg>
+      <!-- ícone removido -->
       <div>
         <h1>Administração CCB Ituiutaba</h1>
         <p>Marcação de Serviços</p>
       </div>
     </div>
     <nav class="tabs nav nav-tabs" role="tablist">
-      <button class="nav-link tab active" data-tab="eventos" aria-selected="true" id="tab-btn-eventos">
+      <a class="nav-link tab active" href="index.html" id="tab-btn-eventos" aria-selected="true">
         <span class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M7 10h10v2H7zm0 4h7v2H7z" fill="currentColor"/><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" fill="currentColor"/></svg>
         </span>
-        Eventos
-      </button>
-      <button class="tab" data-tab="ministerio" id="tab-btn-ministerio">
+        Atendimento
+      </a>
+      <a class="nav-link tab" href="ministerio.html" id="tab-btn-ministerio">
         <span class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.33 0-8 2.17-8 5v1h16v-1c0-2.83-3.67-5-8-5z" fill="currentColor"/></svg>
         </span>
         Ministério
-      </button>
-      <button class="tab" data-tab="congregacoes" id="tab-btn-congregacoes">
+      </a>
+      <a class="nav-link tab" href="congregacoes.html" id="tab-btn-congregacoes">
         <span class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M12 3l9 7-1.5 2L12 7 4.5 12 3 10z" fill="currentColor"/><path d="M5 13v7h5v-4h4v4h5v-7l-7-5z" fill="currentColor"/></svg>
         </span>
@@ -43,13 +41,13 @@
           <span id="badge-cooperador-oficial" class="tab-badge badge-cooperador hidden" title="Cooperador Oficial"></span>
           <span id="badge-cooperador-jovens" class="tab-badge badge-cooperador-jovens hidden" title="Cooperador de Jovens e Menores"></span>
         </span>
-      </button>
-      <button class="tab" data-tab="relatorios" id="tab-btn-relatorios">
+      </a>
+      <a class="nav-link tab" href="relatorios.html" id="tab-btn-relatorios">
         <span class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M3 13h6v8H3zm12-10h6v18h-6zM9 3h6v18H9z" fill="currentColor"/></svg>
         </span>
         Relatórios
-      </button>
+      </a>
       <a class="nav-link tab" href="agendar.html" id="tab-btn-agendar" title="Agendar">
         <span class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6c0-1.1-.9-2-2-2zm-5 8h-3v3H9v-3H6v-2h3V7h2v3h3v2z" fill="currentColor"/></svg>
@@ -65,11 +63,11 @@
 
   <main class="content container my-3">
     <!-- Eventos -->
-    <section id="tab-eventos" class="tab-panel active" role="tabpanel" aria-labelledby="Eventos">
+    <section id="tab-eventos" class="tab-panel active" role="tabpanel" aria-labelledby="Atendimento">
       <div class="card shadow-sm p-3 mb-3">
         <div class="grid-2">
           <div>
-            <h2>Cadastrar Evento</h2>
+            <h2>Marcar Atendimento</h2>
             <form id="form-evento" class="form-grid">
           <label>
             Congregação
@@ -95,7 +93,7 @@
             </table>
           </div>
           <label>
-            Tipo do Evento
+            Tipo do Atendimento
             <select name="tipo" required>
               <option value="Culto Reforço de Coletas">Culto Reforço de Coletas</option>
               <option value="RJM com Reforço de Coletas">RJM com Reforço de Coletas</option>
@@ -118,15 +116,15 @@
             <textarea name="observacoes" rows="3" placeholder="Detalhes, observações..."></textarea>
           </label>
               <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Salvar Evento</button>
+                <button type="submit" class="btn btn-primary">Salvar Atendimento</button>
                 <button type="reset" class="btn btn-outline-secondary">Limpar</button>
               </div>
             </form>
           </div>
           <div>
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <h4 class="meta mb-0">Eventos Cadastrados</h4>
-              <button type="button" id="btn-imprimir-eventos" class="btn btn-sm btn-outline-primary">Gerar arquivo pra imprimir</button>
+              <h4 class="meta mb-0">Atendimentos Cadastrados</h4>
+              <button type="button" id="btn-imprimir-eventos" class="btn btn-sm btn-outline-primary">Imprimir Atendimentos</button>
             </div>
             <table class="table table-sm" id="tabela-reforcos">
               <thead>
@@ -140,7 +138,7 @@
               </thead>
               <tbody id="tabela-reforcos-body">
                 <tr>
-                  <td colspan="5" class="text-muted">Nenhum evento cadastrado</td>
+                  <td colspan="5" class="text-muted">Nenhum atendimento cadastrado</td>
                 </tr>
               </tbody>
             </table>
@@ -148,13 +146,13 @@
         </div>
       </div>
       <div class="card shadow-sm p-3 mb-3">
-        <h3>Eventos Cadastrados</h3>
+        <h3>Atendimentos Cadastrados</h3>
         <div id="lista-eventos" class="list"></div>
       </div>
     </section>
 
     <!-- Ministério -->
-    <section id="tab-ministerio" class="tab-panel" role="tabpanel" aria-labelledby="Ministério">
+    <section id="tab-ministerio" class="tab-panel hidden" role="tabpanel" aria-labelledby="Ministério">
       <div class="card shadow-sm p-3 mb-3">
         <h2>Cadastrar Irmão do Ministério</h2>
         <form id="form-ministerio" class="form-grid">
@@ -208,7 +206,7 @@
     </section>
 
     <!-- Congregações -->
-    <section id="tab-congregacoes" class="tab-panel" role="tabpanel" aria-labelledby="Congregações">
+    <section id="tab-congregacoes" class="tab-panel hidden" role="tabpanel" aria-labelledby="Congregações">
       <div class="card shadow-sm p-3 mb-3">
         <h2>Cadastrar Congregação</h2>
         <form id="form-congregacao" class="form-grid">
@@ -254,35 +252,15 @@
 
           <fieldset class="full">
             <legend>Vincular Ministério da Igreja</legend>
-            <div class="grid-2">
-              <label>
-                Ancião
-                <select name="anciaoId" id="cong-anciao">
-                  <option value="">Selecionar...</option>
-                </select>
-              </label>
-              <label>
-                Tipo
-                <select name="anciaoTipo">
-                  <option value="">Selecionar...</option>
-                  <option value="local">Local</option>
-                  <option value="responsavel">Responsável</option>
-                </select>
-              </label>
-              <label>
-                Diácono
-                <select name="diaconoId" id="cong-diacono">
-                  <option value="">Selecionar...</option>
-                </select>
-              </label>
-              <label>
-                Tipo
-                <select name="diaconoTipo">
-                  <option value="">Selecionar...</option>
-                  <option value="local">Local</option>
-                  <option value="responsavel">Responsável</option>
-                </select>
-              </label>
+            <div>
+              <h4 class="meta">Ancião(ãs)</h4>
+              <div id="anciaos-wrapper" class="repeatable"></div>
+              <button type="button" class="btn" id="add-anciao">+ Ancião</button>
+            </div>
+            <div class="mt-3">
+              <h4 class="meta">Diácono(s)</h4>
+              <div id="diaconos-wrapper" class="repeatable"></div>
+              <button type="button" class="btn" id="add-diacono">+ Diácono</button>
             </div>
           </fieldset>
 
@@ -299,12 +277,12 @@
     </section>
 
     <!-- Relatórios -->
-    <section id="tab-relatorios" class="tab-panel" role="tabpanel" aria-labelledby="Relatórios">
+    <section id="tab-relatorios" class="tab-panel hidden" role="tabpanel" aria-labelledby="Relatórios">
       <div class="card">
         <h2>Relatórios</h2>
         <div class="reports-grid">
           <div class="report">
-            <h3>Resumo de Eventos</h3>
+            <h3>Resumo de Atendimentos</h3>
             <ul id="relatorio-eventos"></ul>
           </div>
           <div class="report">
