@@ -132,6 +132,11 @@
       cb(list);
     });
   }
+  function remove(path, id){
+    if(!db){ toast('Firebase não configurado', 'error'); return Promise.resolve(null); }
+    const ref = db.ref(`${path}/${id}`);
+    return ref.remove().then(()=> true);
+  }
 
   // Eventos
   const formEvento = qs('#form-evento');
@@ -146,22 +151,20 @@
   function renderEventoCultosPreview(congId){
     if(!eventoCultosBody) return;
     if(!congId){
-      eventoCultosBody.innerHTML = '<tr><td colspan="4" class="text-muted">Selecione uma congregação</td></tr>';
+      eventoCultosBody.innerHTML = '<tr><td colspan="3" class="text-muted">Selecione uma congregação</td></tr>';
       return;
     }
     const c = congregacoesByIdEvents[congId];
     const cultos = (c && c.cultos) ? c.cultos : [];
     if(!cultos.length){
-      eventoCultosBody.innerHTML = '<tr><td colspan="4" class="text-muted">Sem cultos cadastrados para esta congregação</td></tr>';
+      eventoCultosBody.innerHTML = '<tr><td colspan="3" class="text-muted">Sem cultos cadastrados para esta congregação</td></tr>';
       return;
     }
     eventoCultosBody.innerHTML = cultos.map(ct => {
-      const prox = nextOccurrence(ct.dia, ct.horario);
       return `<tr>
         <td>${ct.tipo}</td>
         <td>${ct.dia}</td>
         <td>${ct.horario}</td>
-        <td>${formatDateTime(prox)}</td>
       </tr>`;
     }).join('');
   }
@@ -171,6 +174,7 @@
       e.preventDefault();
       const fd = new FormData(formEvento);
       const data = Object.fromEntries(fd.entries());
+      const editId = formEvento.dataset.editId;
       if(!data.tipo || !data.data || !data.congregacaoId || !data.atendenteId){
         toast('Preencha tipo, data, atendente e congregação', 'error');
         return;
@@ -179,6 +183,7 @@
       try{
         const newDate = new Date(data.data);
         const existsSameTypeInMonth = (eventosCache||[]).some(ev => {
+          if(editId && ev.id === editId) return false;
           if(ev.tipo !== data.tipo) return false;
           const d = new Date(ev.data);
           return d.getFullYear() === newDate.getFullYear() && d.getMonth() === newDate.getMonth();
@@ -195,20 +200,39 @@
         atendenteNome = opt ? opt.textContent : '';
       }
       try{
-        const saved = await write('eventos', {
-          tipo: data.tipo,
-          data: data.data,
-          congregacaoId: data.congregacaoId,
-          atendenteId: data.atendenteId,
-          atendenteNome: atendenteNome,
-          observacoes: data.observacoes||''
-        });
-        if(saved){ toast('Evento salvo'); formEvento.reset(); }
+        if(editId){
+          const res = await update('eventos', editId, {
+            tipo: data.tipo,
+            data: data.data,
+            congregacaoId: data.congregacaoId,
+            atendenteId: data.atendenteId,
+            atendenteNome: atendenteNome,
+            observacoes: data.observacoes||''
+          });
+          if(res){ toast('Evento atualizado'); formEvento.reset(); }
+        } else {
+          const saved = await write('eventos', {
+            tipo: data.tipo,
+            data: data.data,
+            congregacaoId: data.congregacaoId,
+            atendenteId: data.atendenteId,
+            atendenteNome: atendenteNome,
+            observacoes: data.observacoes||''
+          });
+          if(saved){ toast('Evento salvo'); formEvento.reset(); }
+        }
       }catch(err){
         console.error(err);
         const msg = (err && (err.code||err.message)) || 'Falha ao salvar evento';
         toast(msg, 'error');
       }
+    });
+    formEvento.addEventListener('reset', ()=>{
+      delete formEvento.dataset.editId;
+      const submitBtn = formEvento.querySelector('button[type="submit"]');
+      const resetBtn = formEvento.querySelector('button[type="reset"]');
+      if(submitBtn) submitBtn.textContent = 'Salvar Evento';
+      if(resetBtn) resetBtn.textContent = 'Limpar';
     });
 
     readList('eventos', list => {
@@ -221,13 +245,53 @@
             <div class="meta">Data: ${formatDate(ev.data)}</div>
             <div class="meta">Congregação: ${ev.congregacaoId}</div>
             <div class="meta">Atendido por: ${ev.atendenteNome||'-'}</div>
-            <div class="meta">Opções: clique com botão direito na aba para mais ações</div>
             ${ev.observacoes?`<div class="meta">Obs: ${ev.observacoes}</div>`:''}
+          </div>
+          <div>
+            <button class="btn btn-sm btn-outline-secondary" data-action="edit-ev" data-id="${ev.id}">Editar</button>
+            <button class="btn btn-sm btn-outline-danger" data-action="delete-ev" data-id="${ev.id}">Excluir</button>
           </div>
         </div>
       `).join('');
       renderTabelaReforcos();
     });
+    if(listaEventos){
+      listaEventos.addEventListener('click', async (e)=>{
+        const btnEdit = e.target.closest('button[data-action="edit-ev"]');
+        const btnDel = e.target.closest('button[data-action="delete-ev"]');
+        if(btnEdit){
+          const id = btnEdit.getAttribute('data-id');
+          const ev = (eventosCache||[]).find(x=>x.id===id);
+          if(!ev || !formEvento) return;
+          formEvento.dataset.editId = ev.id;
+          const submitBtn = formEvento.querySelector('button[type="submit"]');
+          const resetBtn = formEvento.querySelector('button[type="reset"]');
+          if(submitBtn) submitBtn.textContent = 'Atualizar Evento';
+          if(resetBtn) resetBtn.textContent = 'Cancelar Edição';
+          const tipoSel = formEvento.querySelector('select[name="tipo"]');
+          const dataInp = formEvento.querySelector('input[name="data"]');
+          const obsTxt = formEvento.querySelector('textarea[name="observacoes"]');
+          if(tipoSel) tipoSel.value = ev.tipo||'';
+          if(dataInp) dataInp.value = ev.data||'';
+          if(eventoCong) { eventoCong.value = ev.congregacaoId||''; renderEventoCultosPreview(ev.congregacaoId||''); }
+          if(eventoAtendente) eventoAtendente.value = ev.atendenteId||'';
+          if(obsTxt) obsTxt.value = ev.observacoes||'';
+        }
+        if(btnDel){
+          const id = btnDel.getAttribute('data-id');
+          const ok = window.confirm('Excluir este evento?');
+          if(!ok) return;
+          try{
+            const removed = await remove('eventos', id);
+            if(removed){ toast('Evento removido'); }
+          }catch(err){
+            console.error(err);
+            const msg = (err && (err.code||err.message)) || 'Falha ao excluir evento';
+            toast(msg, 'error');
+          }
+        }
+      });
+    }
   }
 
   // Popular congregações no select de evento
@@ -313,16 +377,14 @@
     if(!tbody) return;
     const items = collectCultos();
     if(!items.length){
-      tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Nenhum horário adicionado</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3" class="text-muted">Nenhum horário adicionado</td></tr>';
       return;
     }
     tbody.innerHTML = items.map(it=>{
-      const prox = nextOccurrence(it.dia, it.horario);
       return `<tr>
         <td>${it.tipo}</td>
         <td>${it.dia}</td>
         <td>${it.horario}</td>
-        <td>${formatDateTime(prox)}</td>
       </tr>`;
     }).join('');
   }
@@ -689,7 +751,7 @@
         if(resetBtn) resetBtn.textContent = 'Limpar';
         if(cultosWrapper) cultosWrapper.innerHTML = '';
         const tbody = qs('#cultos-preview-body');
-        if(tbody) tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Nenhum horário adicionado</td></tr>';
+        if(tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-muted">Nenhum horário adicionado</td></tr>';
       });
     }
   }
