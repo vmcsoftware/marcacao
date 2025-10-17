@@ -786,6 +786,7 @@
             </div>
             <div>
               <button class="btn btn-sm btn-outline-secondary" data-action="edit-min" data-id="${m.id}">Editar</button>
+              <button class="btn btn-sm btn-outline-danger" data-action="delete-min" data-id="${m.id}">Excluir</button>
             </div>
           </div>
         `;
@@ -903,36 +904,63 @@
     relCongregacoesEl.textContent = `Total de congregações cadastradas: ${list.length}`;
   }
 
-  // Editar Ministério: delegar clique e carregar no formulário
+  // Editar/Excluir Ministério: delegar clique para editar ou remover
   if(listaMin){
-    listaMin.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button[data-action="edit-min"]');
-      if(!btn) return;
-      const id = btn.getAttribute('data-id');
-      const m = ministryCache.find(x=>x.id===id);
-      if(!m) return;
-      const formMinEl = qs('#form-ministerio');
-      if(!formMinEl) return;
-      formMinEl.dataset.editId = m.id;
-      const submitBtn = formMinEl.querySelector('button[type="submit"]');
-      const resetBtn = formMinEl.querySelector('button[type="reset"]');
-      if(submitBtn) submitBtn.textContent = 'Atualizar Irmão';
-      if(resetBtn) resetBtn.textContent = 'Cancelar Edição';
-      formMinEl.querySelector('input[name="nome"]').value = m.nome||'';
-      const funcSel = formMinEl.querySelector('select[name="funcao"]');
-      if(funcSel) funcSel.value = m.funcao||'';
-      const congSel = formMinEl.querySelector('select[name="congregacaoId"]');
-      if(congSel) congSel.value = m.congregacaoId||'';
-      formMinEl.querySelector('input[name="telefone"]').value = m.telefone||'';
-      formMinEl.querySelector('input[name="email"]').value = m.email||'';
-      const al = formMinEl.querySelector('input[name="anciaoLocal"]');
-      const ar = formMinEl.querySelector('input[name="anciaoResponsavel"]');
-      const dl = formMinEl.querySelector('input[name="diaconoLocal"]');
-      const dr = formMinEl.querySelector('input[name="diaconoResponsavel"]');
-      if(al) al.checked = !!m.anciaoLocal;
-      if(ar) ar.checked = !!m.anciaoResponsavel;
-      if(dl) dl.checked = !!m.diaconoLocal;
-      if(dr) dr.checked = !!m.diaconoResponsavel;
+    listaMin.addEventListener('click', async (e)=>{
+      const btnDel = e.target.closest('button[data-action="delete-min"]');
+      const btnEdit = e.target.closest('button[data-action="edit-min"]');
+      if(btnDel){
+        const id = btnDel.getAttribute('data-id');
+        const m = ministryCache.find(x=>x.id===id);
+        if(!m) return;
+        const ok = confirm('Tem certeza que deseja excluir este irmão?');
+        if(!ok) return;
+        try{
+          await remove('ministerio', id);
+          toast('Irmão excluído com sucesso');
+          // Se estiver editando este registro, reseta o formulário
+          const formMinEl = qs('#form-ministerio');
+          if(formMinEl && formMinEl.dataset.editId === id){
+            delete formMinEl.dataset.editId;
+            const submitBtn = formMinEl.querySelector('button[type="submit"]');
+            const resetBtn = formMinEl.querySelector('button[type="reset"]');
+            if(submitBtn) submitBtn.textContent = 'Salvar Irmão do Ministério';
+            if(resetBtn) resetBtn.textContent = 'Limpar';
+            formMinEl.reset && formMinEl.reset();
+          }
+        }catch(err){
+          console.error(err);
+          toast('Erro ao excluir. Tente novamente.', 'error');
+        }
+        return;
+      }
+      if(btnEdit){
+        const id = btnEdit.getAttribute('data-id');
+        const m = ministryCache.find(x=>x.id===id);
+        if(!m) return;
+        const formMinEl = qs('#form-ministerio');
+        if(!formMinEl) return;
+        formMinEl.dataset.editId = m.id;
+        const submitBtn = formMinEl.querySelector('button[type="submit"]');
+        const resetBtn = formMinEl.querySelector('button[type="reset"]');
+        if(submitBtn) submitBtn.textContent = 'Atualizar Irmão';
+        if(resetBtn) resetBtn.textContent = 'Cancelar Edição';
+        formMinEl.querySelector('input[name="nome"]').value = m.nome||'';
+        const funcSel = formMinEl.querySelector('select[name="funcao"]');
+        if(funcSel) funcSel.value = m.funcao||'';
+        const congSel = formMinEl.querySelector('select[name="congregacaoId"]');
+        if(congSel) congSel.value = m.congregacaoId||'';
+        formMinEl.querySelector('input[name="telefone"]').value = m.telefone||'';
+        formMinEl.querySelector('input[name="email"]').value = m.email||'';
+        const al = formMinEl.querySelector('input[name="anciaoLocal"]');
+        const ar = formMinEl.querySelector('input[name="anciaoResponsavel"]');
+        const dl = formMinEl.querySelector('input[name="diaconoLocal"]');
+        const dr = formMinEl.querySelector('input[name="diaconoResponsavel"]');
+        if(al) al.checked = !!m.anciaoLocal;
+        if(ar) ar.checked = !!m.anciaoResponsavel;
+        if(dl) dl.checked = !!m.diaconoLocal;
+        if(dr) dr.checked = !!m.diaconoResponsavel;
+      }
     });
     const formMinResetEl = qs('#form-ministerio');
     formMinResetEl && formMinResetEl.addEventListener('reset', ()=>{
@@ -1059,6 +1087,7 @@
             </div>
             <div>
               <button class="btn btn-sm btn-outline-secondary" data-action="edit-cong" data-id="${c.id}">Editar</button>
+              <button class="btn btn-sm btn-outline-danger" data-action="delete-cong" data-id="${c.id}">Excluir</button>
             </div>
           </div>
         `;
@@ -1115,12 +1144,42 @@
       }
     }
     if(listaCong){
-      listaCong.addEventListener('click', (e)=>{
-        const btn = e.target.closest('button[data-action="edit-cong"]');
-        if(!btn) return;
-        const id = btn.getAttribute('data-id');
-        const c = congregacoesCache.find(x=>x.id===id);
-        startEditCongregacao(c);
+      listaCong.addEventListener('click', async (e)=>{
+        const btnDel = e.target.closest('button[data-action="delete-cong"]');
+        const btnEdit = e.target.closest('button[data-action=\"edit-cong\"]');
+        if(btnDel){
+          const id = btnDel.getAttribute('data-id');
+          const c = congregacoesCache.find(x=>x.id===id);
+          if(!c) return;
+          const ok = confirm('Tem certeza que deseja excluir esta congregação?');
+          if(!ok) return;
+          try{
+            await remove('congregacoes', id);
+            toast('Congregação excluída com sucesso');
+            if(formCong && formCong.dataset.editId === id){
+              delete formCong.dataset.editId;
+              const submitBtn = formCong.querySelector('button[type="submit"]');
+              const resetBtn = formCong.querySelector('button[type="reset"]');
+              if(submitBtn) submitBtn.textContent = 'Salvar Atendimento';
+              if(resetBtn) resetBtn.textContent = 'Limpar';
+              formCong.reset && formCong.reset();
+              if(cultosWrapper) cultosWrapper.innerHTML = '';
+              const tbody = qs('#cultos-preview-body');
+              if(tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-muted">Nenhum horário adicionado</td></tr>';
+              if(anciaosWrapper) anciaosWrapper.innerHTML = '';
+              if(diaconosWrapper) diaconosWrapper.innerHTML = '';
+            }
+          }catch(err){
+            console.error(err);
+            toast('Erro ao excluir. Tente novamente.', 'error');
+          }
+          return;
+        }
+        if(btnEdit){
+          const id = btnEdit.getAttribute('data-id');
+          const c = congregacoesCache.find(x=>x.id===id);
+          startEditCongregacao(c);
+        }
       });
       formCong && formCong.addEventListener('reset', ()=>{
         delete formCong.dataset.editId;
