@@ -306,7 +306,7 @@
           <div>
             <strong>${ev.tipo}</strong>
             <div class="meta">Data: ${formatDate(ev.data)}</div>
-            <div class="meta">Congregação: ${congLabel}</div>
+            <div class="meta">Congregação: <span class="congregacao-highlight">${congLabel}</span></div>
             <div class="meta">Atendido por: ${ev.atendenteNome||'-'}</div>
             ${ev.observacoes?`<div class="meta">Obs: ${ev.observacoes}</div>`:''}
           </div>
@@ -1332,7 +1332,7 @@
       return `<tr>
       <td>${diaNome} - ${formatDate(ev.data)}</td>
       <td>${hora}</td>
-      <td>${localLabel}</td>
+      <td><span class="congregacao-highlight">${localLabel}</span></td>
       <td>${ev.atendenteNome||'-'}${ev.atendenteOutraRegiao ? ' <span class=\"flag-outra-regiao\" title=\"Irmão de outra região\"><svg viewBox=\"0 0 24 24\"><path d=\"M12 2c-4.4 0-8 3.1-8 7 0 5 8 13 8 13s8-8 8-13c0-3.9-3.6-7-8-7zm0 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4z\" fill=\"currentColor\"/></svg></span>' : ''}</td>
       <td>${ev.tipo}</td>
     </tr>`;
