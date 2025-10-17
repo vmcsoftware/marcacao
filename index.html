@@ -104,6 +104,8 @@
             <select name="atendenteId" id="evento-atendente" required>
               <option value="">Selecionar (lista do Ministério)...</option>
             </select>
+            <button type="button" id="atendente-outra-regiao-btn" class="btn btn-sm btn-outline-secondary mt-1">Irmão de outra região</button>
+            <input type="text" id="evento-atendente-manual" name="atendenteNomeManual" class="form-control mt-1 hidden" placeholder="Digite o nome do irmão" />
           </label>
           <label class="full">
             Observações
@@ -116,7 +118,7 @@
             </form>
           </div>
           <div>
-            <h4 class="meta">Reforços de Coletas</h4>
+            <h4 class="meta">Eventos Cadastrados</h4>
             <table class="table table-sm" id="tabela-reforcos">
               <thead>
                 <tr>
@@ -129,7 +131,7 @@
               </thead>
               <tbody id="tabela-reforcos-body">
                 <tr>
-                  <td colspan="5" class="text-muted">Nenhum reforço cadastrado</td>
+                  <td colspan="5" class="text-muted">Nenhum evento cadastrado</td>
                 </tr>
               </tbody>
             </table>
