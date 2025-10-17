@@ -287,7 +287,12 @@
     readList('eventos', list => {
       eventosCache = list;
       if(!listaEventos) return;
-      listaEventos.innerHTML = list.map(ev => {
+      const sorted = [...list].sort((a,b)=>{
+        const ad = new Date(a.data);
+        const bd = new Date(b.data);
+        return ad - bd; // crescente: mais próximo primeiro
+      });
+      listaEventos.innerHTML = sorted.map(ev => {
         const congObj = congregacoesByIdEvents[ev.congregacaoId];
         const congLabel = ev.congregacaoNome || (congObj ? (congObj.nomeFormatado || (congObj.cidade && congObj.bairro ? `${congObj.cidade} - ${congObj.bairro}` : (congObj.nome||ev.congregacaoId))) : ev.congregacaoId);
         return `
@@ -903,7 +908,11 @@
 }());
   function renderTabelaReforcos(){
     if(!tabelaReforcosBody) return;
-    const reforcos = (eventosCache||[]);
+    const reforcos = (eventosCache||[]).slice().sort((a,b)=>{
+      const ad = new Date(a.data);
+      const bd = new Date(b.data);
+      return ad - bd; // crescente
+    });
     if(!reforcos.length){
       tabelaReforcosBody.innerHTML = '<tr><td colspan="5" class="text-muted">Nenhum evento cadastrado</td></tr>';
       return;
