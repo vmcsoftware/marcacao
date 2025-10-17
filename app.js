@@ -233,6 +233,48 @@
   const cultosWrapper = qs('#cultos-wrapper');
   const addCultoBtn = qs('#add-culto');
   const diasSemana = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const diasIndice = { 'Domingo':0,'Segunda':1,'Terça':2,'Quarta':3,'Quinta':4,'Sexta':5,'Sábado':6 };
+  function nextOccurrence(dia, horario){
+    try{
+      const targetDow = diasIndice[dia];
+      if(targetDow===undefined || !horario) return null;
+      const [h,m] = horario.split(':').map(n=>parseInt(n,10));
+      const now = new Date();
+      const base = new Date(now);
+      base.setHours(h||0, m||0, 0, 0);
+      const delta = (targetDow - now.getDay() + 7) % 7;
+      base.setDate(now.getDate() + delta);
+      if(delta===0 && base <= now){ base.setDate(base.getDate()+7); }
+      return base;
+    }catch{ return null; }
+  }
+  function formatDateTime(d){
+    if(!d) return '-';
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mi = String(d.getMinutes()).padStart(2,'0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+  }
+  function renderCultosPreview(){
+    const tbody = qs('#cultos-preview-body');
+    if(!tbody) return;
+    const items = collectCultos();
+    if(!items.length){
+      tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Nenhum horário adicionado</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(it=>{
+      const prox = nextOccurrence(it.dia, it.horario);
+      return `<tr>
+        <td>${it.tipo}</td>
+        <td>${it.dia}</td>
+        <td>${it.horario}</td>
+        <td>${formatDateTime(prox)}</td>
+      </tr>`;
+    }).join('');
+  }
   function createCultoRow(initial={}){
     const { tipo='Culto Oficial', dia='Domingo', horario='' } = initial;
     const row = document.createElement('div');
@@ -266,7 +308,10 @@
     if(selDia) selDia.value = dia;
     if(inpHor) inpHor.value = horario;
     const rm = row.querySelector('.culto-remove');
-    rm && rm.addEventListener('click', ()=> row.remove());
+    rm && rm.addEventListener('click', ()=> { row.remove(); renderCultosPreview(); });
+    selTipo && selTipo.addEventListener('change', renderCultosPreview);
+    selDia && selDia.addEventListener('change', renderCultosPreview);
+    inpHor && inpHor.addEventListener('input', renderCultosPreview);
     return row;
   }
   function collectCultos(){
@@ -281,6 +326,7 @@
   if(addCultoBtn && cultosWrapper){
     addCultoBtn.addEventListener('click', ()=>{
       cultosWrapper.appendChild(createCultoRow({ tipo:'Culto Oficial', dia:'Domingo', horario:'' }));
+      renderCultosPreview();
     });
   }
   let congLabelById = {};
@@ -569,6 +615,7 @@
       if(cultosWrapper){
         cultosWrapper.innerHTML = '';
         (c.cultos||[]).forEach(ct=> cultosWrapper.appendChild(createCultoRow(ct)));
+        renderCultosPreview();
       }
     }
     if(listaCong){
@@ -586,6 +633,8 @@
         if(submitBtn) submitBtn.textContent = 'Salvar Congregação';
         if(resetBtn) resetBtn.textContent = 'Limpar';
         if(cultosWrapper) cultosWrapper.innerHTML = '';
+        const tbody = qs('#cultos-preview-body');
+        if(tbody) tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Nenhum horário adicionado</td></tr>';
       });
     }
   }
