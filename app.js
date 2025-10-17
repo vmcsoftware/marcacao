@@ -215,17 +215,28 @@
         toast('Preencha tipo, data, atendente e congregação', 'error');
         return;
       }
-      // Regra: permitir somente um agendamento por mês para o mesmo tipo de evento
+      // Regra: um Culto Oficial e um RJM por mês, em congregações diferentes
       try{
         const newDate = new Date(data.data);
-        const existsSameTypeInMonth = (eventosCache||[]).some(ev => {
+        const sameMonthEvents = (eventosCache||[]).filter(ev => {
           if(editId && ev.id === editId) return false;
-          if(ev.tipo !== data.tipo) return false;
           const d = new Date(ev.data);
           return d.getFullYear() === newDate.getFullYear() && d.getMonth() === newDate.getMonth();
         });
-        if(existsSameTypeInMonth){
-          toast('Já existe um evento deste tipo neste mês. Regra: apenas um agendamento por mês.', 'error');
+        // Bloquear duplicidade do mesmo tipo no mês
+        const existsSameType = sameMonthEvents.some(ev => ev.tipo === data.tipo);
+        if(existsSameType){
+          const msg = data.tipo==='Culto Reforço de Coletas'
+            ? 'Já existe Culto Oficial com reforço neste mês.'
+            : 'Já existe RJM com reforço neste mês.';
+          toast(`${msg} Regra: um CO e um RJM por mês.`, 'error');
+          return;
+        }
+        // Se já existe o outro tipo no mês, exigir congregações diferentes
+        const otherType = data.tipo==='Culto Reforço de Coletas' ? 'RJM com Reforço de Coletas' : 'Culto Reforço de Coletas';
+        const existingOther = sameMonthEvents.find(ev => ev.tipo===otherType);
+        if(existingOther && existingOther.congregacaoId === data.congregacaoId){
+          toast('Regra: CO e RJM do mês devem ser em congregações diferentes.', 'error');
           return;
         }
       }catch{}
