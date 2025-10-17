@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Administração CCB Ituiutaba - Agenda 2026</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    /* Agenda 2026 - estilos específicos da listagem */
+    .agenda2026-responsive { max-height: 65vh; overflow: auto; }
+    #agenda2026-table.agenda2026-table thead th { position: sticky; top: 0; background: #f8fafc; z-index: 1; }
+    #agenda2026-table.agenda2026-table tbody tr:hover { background: #f8fafc; }
+    #agenda2026-table.agenda2026-table tbody tr.event-past { opacity: .86; }
+    #agenda2026-table.agenda2026-table .day-col .badge-day { display:inline-block; font-size:.75rem; padding:.1rem .45rem; border-radius:.5rem; background:#e2e8f0; color:#111827; }
+    #agenda2026-table.agenda2026-table .time-col .time { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#f1f5f9; padding:.1rem .35rem; border-radius:.3rem; }
+    #agenda2026-table.agenda2026-table .pill-servico { display:inline-block; font-size:.78rem; font-weight:600; padding:.2rem .55rem; border-radius:999px; line-height:1; margin-right:.25rem; }
+    #agenda2026-table.agenda2026-table .pill-servico.servico-busca-dos-dons { background:#fde68a; color:#92400e; }
+    #agenda2026-table.agenda2026-table .pill-servico.servico-ordenacao { background:#e9d5ff; color:#6b21a8; }
+    #agenda2026-table.agenda2026-table .pill-servico.servico-santa-ceia { background:#fecaca; color:#991b1b; }
+    #agenda2026-table.agenda2026-table .pill-servico.servico-outros { background:#e5e7eb; color:#374151; }
+    #agenda2026-table.agenda2026-table .servico-desc { color:#475569; }
+    #agenda2026-table.agenda2026-table .chip-cidade { display:inline-block; font-size:.78rem; padding:.15rem .5rem; border-radius:.35rem; background:#eef6ff; color:#1e3a8a; }
+    #agenda2026-table.agenda2026-table .actions .btn-icon { width:28px; height:28px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:.4rem; }
+    #agenda2026-table.agenda2026-table .index-col, #agenda2026-table.agenda2026-table .day-col, #agenda2026-table.agenda2026-table .time-col { white-space: nowrap; }
+    #agenda2026-table.agenda2026-table td:nth-child(5), #agenda2026-table.agenda2026-table td:nth-child(7) { max-width: 380px; }
+    #agenda2026-table.agenda2026-table td:nth-child(5) .servico, #agenda2026-table.agenda2026-table td:nth-child(7) span { display:inline-block; max-width: 360px; overflow:hidden; text-overflow:ellipsis; vertical-align: bottom; }
+    .visually-hidden { position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px, 1px, 1px, 1px); white-space:nowrap; }
+  </style>
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-light">
+  <header class="app-header bg-white shadow-sm">
+    <div class="brand">
+      <div>
+        <h1>Administração CCB Ituiutaba</h1>
+        <p>Agenda de Reuniões e Serviços 2026</p>
+      </div>
+    </div>
+    <nav class="tabs nav nav-tabs" role="tablist">
+      <a class="nav-link tab" href="index.html" id="tab-btn-eventos">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M7 10h10v2H7zm0 4h7v2H7z" fill="currentColor"/><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" fill="currentColor"/></svg>
+        </span>
+        Atendimento
+      </a>
+      <a class="nav-link tab" href="ministerio.html" id="tab-btn-ministerio">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.33 0-8 2.17-8 5v1h16v-1c0-2.83-3.67-5-8-5z" fill="currentColor"/></svg>
+        </span>
+        Ministério
+      </a>
+      <a class="nav-link tab" href="congregacoes.html" id="tab-btn-congregacoes">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 3l9 7-1.5 2L12 7 4.5 12 3 10z" fill="currentColor"/><path d="M5 13v7h5v-4h4v4h5v-7l-7-5z" fill="currentColor"/></svg>
+        </span>
+        Congregações
+      </a>
+      <a class="nav-link tab" href="relatorios.html" id="tab-btn-relatorios">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 13h6v8H3zm12-10h6v18h-6zM9 3h6v18H9z" fill="currentColor"/></svg>
+        </span>
+        Relatórios
+      </a>
+      <a class="nav-link tab active" href="agenda2026.html" id="tab-btn-agenda2026" title="Agenda 2026">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6c0-1.1-.9-2-2-2z" fill="currentColor"/></svg>
+        </span>
+        Agenda 2026
+      </a>
+      <a class="nav-link tab" href="dashboard.html" id="tab-btn-dashboard" title="Dashboard">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 13h6v8H3zM10 3h4v18h-4zM15 9h6v12h-6z" fill="currentColor"/></svg>
+        </span>
+        Dashboard
+      </a>
+    </nav>
+  </header>
+
+  <main class="content container my-3">
+    <section class="card shadow-sm p-3 mb-3">
+      <div class="d-flex justify-content-between align-items-end flex-wrap">
+        <div>
+          <h2 class="mb-1">CONGREGAÇÃO CRISTÃ NO BRASIL</h2>
+          <div class="text-muted">AGENDA DE REUNIÕES E SERVIÇOS 2026</div>
+          <div class="text-muted">Administração | Ituiutaba</div>
+        </div>
+        <div class="d-flex align-items-center mt-2 mt-sm-0">
+          <button type="button" id="btn-novo-agenda2026" class="btn btn-sm btn-success me-2" title="Cadastrar novo agendamento">Novo</button>
+          <button type="button" id="btn-importar-agenda2026" class="btn btn-sm btn-outline-success me-2" title="Importar planilha Excel">Importar XLS</button>
+          <button type="button" id="btn-imprimir-agenda2026" class="btn btn-sm btn-outline-primary">Imprimir</button>
+          <button type="button" id="btn-exportar-pdf-agenda2026" class="btn btn-sm btn-outline-secondary ms-2" title="Exportar em PDF">PDF</button>
+          <button type="button" id="btn-exportar-xls-agenda2026" class="btn btn-sm btn-outline-secondary ms-2" title="Exportar em XLS">XLS</button>
+        </div>
+        <input type="file" id="file-import-agenda2026" accept=".xlsx,.xls" hidden />
+      </div>
+
+      <form id="agenda2026-form" class="row g-2 mt-3 hidden">
+        <div class="col-6 col-md-2">
+          <label for="agenda2026-data" class="form-label">Data</label>
+          <input type="date" id="agenda2026-data" class="form-control" required />
+        </div>
+        <div class="col-6 col-md-2">
+          <label for="agenda2026-hora" class="form-label">Hora</label>
+          <input type="time" id="agenda2026-hora" class="form-control" required />
+        </div>
+        <div class="col-md-4">
+          <label for="agenda2026-tipo" class="form-label">Tipo de Serviço</label>
+          <div class="input-group">
+            <select id="agenda2026-tipo" class="form-select" required>
+              <option value="">Selecionar...</option>
+              <option>Busca dos Dons</option>
+              <option>Ordenação</option>
+              <option>Santa Ceia</option>
+              <option>Outros</option>
+            </select>
+            <button type="button" id="btn-add-tipo" class="btn btn-outline-secondary" title="Adicionar opção">+</button>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label for="agenda2026-setor" class="form-label">Setor</label>
+          <div class="input-group">
+            <select id="agenda2026-setor" class="form-select">
+              <option value="">Selecionar...</option>
+              <option>Irmandade</option>
+              <option>Orquestra</option>
+              <option>Outros</option>
+            </select>
+            <button type="button" id="btn-add-setor" class="btn btn-outline-secondary" title="Adicionar opção">+</button>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label for="agenda2026-descricao" class="form-label">Descrição do Serviço</label>
+          <input type="text" id="agenda2026-descricao" class="form-control" />
+        </div>
+        <div class="col-md-3">
+          <label for="agenda2026-cidade" class="form-label">Cidade</label>
+          <div class="input-group">
+            <select id="agenda2026-cidade" class="form-select">
+              <option value="">Selecionar...</option>
+              <option>Cachoeira Dourada</option>
+              <option>Uberlândia</option>
+              <option>Ituiutaba</option>
+              <option>Capinópolis</option>
+              <option>Ipiaçu</option>
+              <option>Gurinhatã</option>
+              <option>Santa Vitória</option>
+            </select>
+            <button type="button" id="btn-add-cidade" class="btn btn-outline-secondary" title="Adicionar opção">+</button>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label for="agenda2026-congregacao" class="form-label">Congregação</label>
+          <input type="text" id="agenda2026-congregacao" class="form-control" list="agenda2026-congregacoes-list" />
+          <datalist id="agenda2026-congregacoes-list"></datalist>
+        </div>
+        <div class="col-md-4">
+          <label for="agenda2026-local" class="form-label">Local</label>
+          <select id="agenda2026-local" class="form-select">
+            <option value="">Selecionar...</option>
+            <option>Salão de Culto</option>
+            <option>Adm</option>
+            <option>Sala Reuniões 2º Piso</option>
+            <option>Sala Reuniões</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label for="agenda2026-publico" class="form-label">Público</label>
+          <input type="text" id="agenda2026-publico" class="form-control" />
+        </div>
+        <div class="col-md-4">
+          <label for="agenda2026-responsavel" class="form-label">Responsável</label>
+          <input type="text" id="agenda2026-responsavel" class="form-control" />
+        </div>
+        <div class="col-12 mt-2 d-flex gap-2">
+          <button type="button" id="agenda2026-salvar" class="btn btn-primary">Salvar</button>
+          <button type="reset" id="agenda2026-limpar" class="btn btn-outline-secondary">Limpar</button>
+          <button type="button" id="agenda2026-cancelar" class="btn btn-outline-secondary">Cancelar</button>
+        </div>
+      </form>
+
+      <div class="table-responsive agenda2026-responsive mt-3">
+        <table class="table table-sm agenda2026-table" id="agenda2026-table">
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Data</th>
+              <th>Dia</th>
+              <th>Hor.</th>
+              <th>Serviço</th>
+              <th>Cidade</th>
+              <th>Congregação / Salão</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="agenda2026-body">
+            <tr>
+              <td colspan="8" class="text-muted">Carregando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer text-muted bg-white border-top py-3">
+    <small>© 2025 Administração CCB Ituiutaba • </small>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Nenhuma restrição de acesso aqui; é apenas leitura pública
+  </script>
+</body>
+</html>
