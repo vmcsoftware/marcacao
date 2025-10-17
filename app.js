@@ -153,6 +153,7 @@
   const atendenteManualInput = qs('#evento-atendente-manual');
   const eventoCultosBody = qs('#evento-cultos-body');
   const tabelaReforcosBody = qs('#tabela-reforcos-body');
+  const btnImprimirEventos = qs('#btn-imprimir-eventos');
   // Relatórios
   const relEventosEl = qs('#relatorio-eventos');
   const relMinisterioEl = qs('#relatorio-ministerio');
@@ -317,8 +318,8 @@
       `}).join('');
       renderTabelaReforcos();
     });
-    if(listaEventos){
-      listaEventos.addEventListener('click', async (e)=>{
+  if(listaEventos){
+    listaEventos.addEventListener('click', async (e)=>{
         const btnEdit = e.target.closest('button[data-action="edit-ev"]');
         const btnDel = e.target.closest('button[data-action="delete-ev"]');
         if(btnEdit){
@@ -360,6 +361,97 @@
         }
       });
     }
+  }
+
+  // Geração de arquivo HTML para impressão dos eventos
+  if(btnImprimirEventos){
+    btnImprimirEventos.addEventListener('click', ()=>{
+      try{
+        const reforcos = (eventosCache||[]).slice().sort((a,b)=>{
+          const ad = new Date(a.data);
+          const bd = new Date(b.data);
+          return ad - bd;
+        });
+        if(!reforcos.length){
+          toast('Nenhum evento cadastrado para imprimir', 'error');
+          return;
+        }
+        const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+        const rowsHtml = reforcos.map(ev => {
+          const d = new Date(ev.data);
+          const diaNome = diasSemanaPt[d.getDay()];
+          const cong = congregacoesByIdEvents[ev.congregacaoId];
+          const localLabel = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
+          const tipoCulto = ev.tipo==='Culto Reforço de Coletas' ? 'Culto Oficial' : (ev.tipo==='RJM com Reforço de Coletas' ? 'RJM' : '');
+          let hora = '-';
+          if(cong && Array.isArray(cong.cultos)){
+            const match = cong.cultos.find(ct => ct.tipo===tipoCulto && ct.dia===diaNome);
+            if(match && match.horario) hora = match.horario;
+          }
+          return `<tr>
+            <td>${formatDate(ev.data)}</td>
+            <td>${hora}</td>
+            <td>${localLabel}</td>
+            <td>${ev.atendenteNome||'-'}</td>
+            <td>${ev.tipo}</td>
+          </tr>`;
+        }).join('');
+
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2,'0');
+        const mm = String(now.getMonth()+1).padStart(2,'0');
+        const yyyy = now.getFullYear();
+        const hh = String(now.getHours()).padStart(2,'0');
+        const mi = String(now.getMinutes()).padStart(2,'0');
+        const geradoEm = `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+        const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Eventos Cadastrados</title>
+  <style>
+    body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#000; margin:24px; }
+    h1{ font-size: 18px; margin: 0 0 8px; }
+    p{ font-size: 12px; margin: 0 0 12px; color:#333; }
+    table{ width:100%; border-collapse: collapse; }
+    th, td{ border:1px solid #000; padding:6px; font-size:12px; }
+    th{ background:#f2f2f2; }
+    @media print{ .no-print{ display:none; } }
+  </style>
+  </head>
+<body>
+  <h1>Eventos Cadastrados</h1>
+  <p>Gerado em: ${geradoEm}</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Hora</th>
+        <th>Local</th>
+        <th>Quem atende</th>
+        <th>Tipo</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsHtml}
+    </tbody>
+  </table>
+</body>
+</html>`;
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'eventos-cadastrados.html';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+        toast('Arquivo gerado para impressão');
+      }catch(err){
+        console.error(err);
+        toast('Falha ao gerar arquivo de impressão', 'error');
+      }
+    });
   }
 
   // Popular congregações no select de evento
