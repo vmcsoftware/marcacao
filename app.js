@@ -1002,6 +1002,106 @@
       }
     });
   }
+  // Agendamento de Coletas (Página agendar.html)
+  const agendarGrid = qs('#agendar-grid');
+  const agendarForm = qs('#agendar-form');
+  const agendarCongLabelEl = qs('#agendar-cong-label');
+  const agendarCongIdInput = qs('#agendar-cong-id');
+  const agendarTipoSel = qs('#agendar-tipo');
+  const agendarDataInp = qs('#agendar-data');
+  const agendarCancelBtn = qs('#agendar-cancelar');
+
+  if(agendarGrid){
+    // Carregar congregações e renderizar botões
+    readList('congregacoes', list => {
+      const labelFor = (c) => c.nomeFormatado || (c.cidade && c.bairro ? `${c.cidade} - ${c.bairro}` : (c.nome||c.id));
+      agendarGrid.innerHTML = list.map(c => 
+        `<button type="button" class="btn btn-outline-primary agendar-cong-btn" data-id="${c.id}">${labelFor(c)}</button>`
+      ).join('');
+      congregacoesByIdEvents = {};
+      list.forEach(c => { congregacoesByIdEvents[c.id] = c; });
+
+      agendarGrid.addEventListener('click', (e)=>{
+        const btn = e.target.closest('.agendar-cong-btn');
+        if(!btn) return;
+        const congId = btn.getAttribute('data-id');
+        const c = list.find(x => x.id===congId);
+        const label = labelFor(c);
+        if(agendarCongIdInput) agendarCongIdInput.value = congId;
+        if(agendarCongLabelEl) agendarCongLabelEl.textContent = label;
+        agendarForm && agendarForm.classList.remove('hidden');
+        agendarTipoSel && (agendarTipoSel.value = 'Culto Reforço de Coletas');
+        agendarDataInp && (agendarDataInp.value = '');
+        const hint = qs('#agendar-hint');
+        if(hint){
+          if(label==='Ituiutaba - Centro'){
+            hint.textContent = 'Obs: Ituiutaba - Centro deve ser agendado na quinta-feira (Culto Oficial).';
+            hint.classList.remove('hidden');
+          } else {
+            hint.textContent = '';
+            hint.classList.add('hidden');
+          }
+        }
+      });
+    });
+
+    // Carregar eventos para validação
+    readList('eventos', list => { eventosCache = list; });
+
+    if(agendarForm){
+      agendarForm.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const congId = agendarCongIdInput ? agendarCongIdInput.value : '';
+        const tipo = agendarTipoSel ? agendarTipoSel.value : '';
+        const data = agendarDataInp ? agendarDataInp.value : '';
+        if(!congId || !tipo || !data){ toast('Selecione congregação, tipo e data', 'error'); return; }
+
+        const c = congregacoesByIdEvents[congId];
+        const label = c ? (c.nomeFormatado || (c.cidade && c.bairro ? `${c.cidade} - ${c.bairro}` : (c.nome||congId))) : congId;
+
+        // Exceção: Ituiutaba - Centro -> CO deve ser na quinta-feira
+        if(label==='Ituiutaba - Centro' && tipo==='Culto Reforço de Coletas'){
+          const d = new Date(data);
+          if(d.getDay() !== 4){ toast('Ituiutaba - Centro: Culto Oficial deve ser na quinta-feira.', 'error'); return; }
+        }
+
+        const dNew = new Date(data);
+        const sameMonthSameCong = (eventosCache||[]).filter(ev=>{
+          const dEv = new Date(ev.data);
+          return ev.congregacaoId===congId && dEv.getFullYear()===dNew.getFullYear() && dEv.getMonth()===dNew.getMonth();
+        });
+        // Regra: permitir múltiplas coletas, mas bloquear duplicidade por tipo (CO/RJM) na mesma congregação/mês
+        const typeAlready = sameMonthSameCong.some(ev => ev.tipo===tipo);
+        if(typeAlready){
+          toast('Já existe este tipo agendado nesta congregação neste mês.', 'error');
+          return;
+        }
+
+        try{
+          const saved = await write('eventos', {
+            tipo,
+            data,
+            congregacaoId: congId,
+            congregacaoNome: label,
+            atendenteId: '',
+            atendenteNome: '',
+            observacoes: ''
+          });
+          if(saved){ toast('Agendamento salvo'); agendarForm.reset(); agendarForm.classList.add('hidden'); }
+        }catch(err){
+          console.error(err);
+          toast('Falha ao salvar agendamento', 'error');
+        }
+      });
+
+      agendarCancelBtn && agendarCancelBtn.addEventListener('click', (e)=>{
+        e.preventDefault();
+        agendarForm.reset();
+        agendarForm.classList.add('hidden');
+      });
+    }
+  }
+
 }());
   function renderTabelaReforcos(){
     if(!tabelaReforcosBody) return;
