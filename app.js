@@ -143,11 +143,36 @@
   const listaEventos = qs('#lista-eventos');
   const eventoCong = qs('#evento-congregacao');
   const eventoAtendente = qs('#evento-atendente');
+  const outraRegiaoBtn = qs('#atendente-outra-regiao-btn');
+  const atendenteManualInput = qs('#evento-atendente-manual');
   const eventoCultosBody = qs('#evento-cultos-body');
   const tabelaReforcosBody = qs('#tabela-reforcos-body');
   let eventosCache = [];
   let congregacoesCacheEvents = [];
   let congregacoesByIdEvents = {};
+
+  function toggleAtendenteManual(enable){
+    const on = !!enable;
+    if(atendenteManualInput){
+      atendenteManualInput.classList.toggle('hidden', !on);
+      atendenteManualInput.required = on;
+      if(!on){ atendenteManualInput.value = ''; }
+    }
+    if(eventoAtendente){
+      eventoAtendente.required = !on;
+      if(on){ eventoAtendente.value = ''; }
+    }
+    if(outraRegiaoBtn){
+      outraRegiaoBtn.textContent = on ? 'Usar lista do Ministério' : 'Irmão de outra região';
+    }
+  }
+
+  if(outraRegiaoBtn){
+    outraRegiaoBtn.addEventListener('click', ()=>{
+      const hidden = atendenteManualInput ? atendenteManualInput.classList.contains('hidden') : true;
+      toggleAtendenteManual(hidden);
+    });
+  }
   function renderEventoCultosPreview(congId){
     if(!eventoCultosBody) return;
     if(!congId){
@@ -175,7 +200,8 @@
       const fd = new FormData(formEvento);
       const data = Object.fromEntries(fd.entries());
       const editId = formEvento.dataset.editId;
-      if(!data.tipo || !data.data || !data.congregacaoId || !data.atendenteId){
+      const manualNome = (data.atendenteNomeManual||'').trim();
+      if(!data.tipo || !data.data || !data.congregacaoId || (!data.atendenteId && !manualNome)){
         toast('Preencha tipo, data, atendente e congregação', 'error');
         return;
       }
@@ -198,6 +224,10 @@
       if(eventoAtendente){
         const opt = eventoAtendente.querySelector(`option[value="${data.atendenteId}"]`);
         atendenteNome = opt ? opt.textContent : '';
+      }
+      if(manualNome){
+        atendenteNome = manualNome;
+        data.atendenteId = '';
       }
       // Encontrar nome formatado da congregação selecionada (denormalização)
       let congregacaoNome = '';
@@ -242,6 +272,7 @@
       if(submitBtn) submitBtn.textContent = 'Salvar Evento';
       if(resetBtn) resetBtn.textContent = 'Limpar';
     });
+    formEvento.addEventListener('reset', ()=>{ toggleAtendenteManual(false); });
 
     readList('eventos', list => {
       eventosCache = list;
@@ -286,6 +317,12 @@
           if(dataInp) dataInp.value = ev.data||'';
           if(eventoCong) { eventoCong.value = ev.congregacaoId||''; renderEventoCultosPreview(ev.congregacaoId||''); }
           if(eventoAtendente) eventoAtendente.value = ev.atendenteId||'';
+          if((!ev.atendenteId || ev.atendenteId==='') && ev.atendenteNome){
+            toggleAtendenteManual(true);
+            if(atendenteManualInput) atendenteManualInput.value = ev.atendenteNome;
+          } else {
+            toggleAtendenteManual(false);
+          }
           if(obsTxt) obsTxt.value = ev.observacoes||'';
         }
         if(btnDel){
@@ -805,9 +842,9 @@
 }());
   function renderTabelaReforcos(){
     if(!tabelaReforcosBody) return;
-    const reforcos = (eventosCache||[]).filter(ev => ev.tipo==='Culto Reforço de Coletas' || ev.tipo==='RJM com Reforço de Coletas');
+    const reforcos = (eventosCache||[]);
     if(!reforcos.length){
-      tabelaReforcosBody.innerHTML = '<tr><td colspan="5" class="text-muted">Nenhum reforço cadastrado</td></tr>';
+      tabelaReforcosBody.innerHTML = '<tr><td colspan="5" class="text-muted">Nenhum evento cadastrado</td></tr>';
       return;
     }
     const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
