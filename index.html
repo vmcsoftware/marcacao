@@ -176,8 +176,30 @@
 
           <fieldset class="full">
             <legend>Dias e Horários de Cultos</legend>
-            <div id="cultos-wrapper" class="repeatable"></div>
-            <button type="button" class="btn" id="add-culto">Adicionar Dia/Horário</button>
+            <div class="grid-2">
+              <div>
+                <div id="cultos-wrapper" class="repeatable"></div>
+                <button type="button" class="btn" id="add-culto">Adicionar Dia/Horário</button>
+              </div>
+              <div>
+                <h4 class="meta">Próximas datas (CO/RJM)</h4>
+                <table class="table table-sm" id="cultos-preview">
+                  <thead>
+                    <tr>
+                      <th>Tipo</th>
+                      <th>Dia</th>
+                      <th>Horário</th>
+                      <th>Próxima Data</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cultos-preview-body">
+                    <tr>
+                      <td colspan="4" class="text-muted">Nenhum horário adicionado</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </fieldset>
 
           <fieldset class="full">
