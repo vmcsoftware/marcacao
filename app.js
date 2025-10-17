@@ -215,30 +215,24 @@
         toast('Preencha tipo, data, atendente e congregação', 'error');
         return;
       }
-      // Regra: um Culto Oficial e um RJM por mês, em congregações diferentes
+      // Nova regra: permitir coletas por tipo em todas as congregações;
+      // bloquear apenas duplicidade de CO na MESMA congregação e mês.
       try{
         const newDate = new Date(data.data);
-        const sameMonthEvents = (eventosCache||[]).filter(ev => {
+        const sameMonthSameCong = (eventosCache||[]).filter(ev => {
           if(editId && ev.id === editId) return false;
+          if(ev.congregacaoId !== data.congregacaoId) return false;
           const d = new Date(ev.data);
           return d.getFullYear() === newDate.getFullYear() && d.getMonth() === newDate.getMonth();
         });
-        // Bloquear duplicidade do mesmo tipo no mês
-        const existsSameType = sameMonthEvents.some(ev => ev.tipo === data.tipo);
-        if(existsSameType){
-          const msg = data.tipo==='Culto Reforço de Coletas'
-            ? 'Já existe Culto Oficial com reforço neste mês.'
-            : 'Já existe RJM com reforço neste mês.';
-          toast(`${msg} Regra: um CO e um RJM por mês.`, 'error');
-          return;
+        if(data.tipo === 'Culto Reforço de Coletas'){
+          const existsCO = sameMonthSameCong.some(ev => ev.tipo === 'Culto Reforço de Coletas');
+          if(existsCO){
+            toast('Já existe coleta em Culto Oficial nesta congregação neste mês.', 'error');
+            return;
+          }
         }
-        // Se já existe o outro tipo no mês, exigir congregações diferentes
-        const otherType = data.tipo==='Culto Reforço de Coletas' ? 'RJM com Reforço de Coletas' : 'Culto Reforço de Coletas';
-        const existingOther = sameMonthEvents.find(ev => ev.tipo===otherType);
-        if(existingOther && existingOther.congregacaoId === data.congregacaoId){
-          toast('Regra: CO e RJM do mês devem ser em congregações diferentes.', 'error');
-          return;
-        }
+        // RJM liberado por mês em todas as congregações (sem bloqueio por congregação)
       }catch{}
       // Encontrar nome do atendente selecionado (denormalização para exibir na lista)
       let atendenteNome = '';
