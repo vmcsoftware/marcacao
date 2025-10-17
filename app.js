@@ -392,7 +392,7 @@
             <td>${formatDate(ev.data)}</td>
             <td>${hora}</td>
             <td>${localLabel}</td>
-            <td>${ev.atendenteNome||'-'}</td>
+            <td>${ev.atendenteNome||'-'}${ev.atendenteOutraRegiao ? ' <span class="flag-outra-regiao" title="Irmão de outra região"><svg viewBox="0 0 24 24"><path d="M12 2c-4.4 0-8 3.1-8 7 0 5 8 13 8 13s8-8 8-13c0-3.9-3.6-7-8-7zm0 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" fill="currentColor"/></svg></span>' : ''}</td>
             <td>${ev.tipo}</td>
           </tr>`;
         }).join('');
@@ -1082,17 +1082,40 @@
           return;
         }
 
+        // Atendente: lista do Ministério ou outra região (manual)
+        const atendenteId = agendarAtendenteSel ? agendarAtendenteSel.value : '';
+        const manualNome = agendarAtendenteManualInp ? agendarAtendenteManualInp.value.trim() : '';
+        if(!atendenteId && !manualNome){
+          toast('Informe quem vai atender (lista ou outra região).', 'error');
+          return;
+        }
+        let atendenteNome = '';
+        if(atendenteId && agendarAtendenteSel){
+          const opt = agendarAtendenteSel.querySelector(`option[value="${atendenteId}"]`);
+          atendenteNome = opt ? opt.textContent : '';
+        }
+        if(manualNome){
+          atendenteNome = manualNome;
+        }
+
         try{
           const saved = await write('eventos', {
             tipo,
             data,
             congregacaoId: congId,
             congregacaoNome: label,
-            atendenteId: '',
-            atendenteNome: '',
+            atendenteId: manualNome ? '' : (atendenteId||''),
+            atendenteNome: atendenteNome,
+            atendenteOutraRegiao: !!manualNome,
             observacoes: ''
           });
-          if(saved){ toast('Agendamento salvo'); agendarForm.reset(); agendarForm.classList.add('hidden'); }
+          if(saved){
+            toast('Agendamento salvo');
+            agendarForm.reset();
+            toggleAgendarAtendenteManual(false);
+            maybeShowAgendarAtendente();
+            agendarForm.classList.add('hidden');
+          }
         }catch(err){
           console.error(err);
           toast('Falha ao salvar agendamento', 'error');
@@ -1102,6 +1125,8 @@
       agendarCancelBtn && agendarCancelBtn.addEventListener('click', (e)=>{
         e.preventDefault();
         agendarForm.reset();
+        toggleAgendarAtendenteManual(false);
+        maybeShowAgendarAtendente();
         agendarForm.classList.add('hidden');
       });
     }
@@ -1135,7 +1160,7 @@
         <td>${formatDate(ev.data)}</td>
         <td>${hora}</td>
         <td>${localLabel}</td>
-        <td>${ev.atendenteNome||'-'}</td>
+        <td>${ev.atendenteNome||'-'}${ev.atendenteOutraRegiao ? ' <span class="flag-outra-regiao" title="Irmão de outra região"><svg viewBox="0 0 24 24"><path d="M12 2c-4.4 0-8 3.1-8 7 0 5 8 13 8 13s8-8 8-13c0-3.9-3.6-7-8-7zm0 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" fill="currentColor"/></svg></span>' : ''}</td>
         <td>${ev.tipo}</td>
       </tr>`;
     }).join('');
