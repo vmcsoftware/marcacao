@@ -787,8 +787,24 @@ legend {
 .flag-outra-regiao svg { width: 14px; height: 14px; color: #e11d48; vertical-align: text-bottom; }
 .flag-outra-regiao { margin-left: .35rem; }
 
+/* Destaque para o nome da congregação */
+.congregacao-highlight {
+  font-weight: 700;
+  color: var(--secondary-color);
+  background: #eef6ff;
+  padding: 0.1rem 0.35rem;
+  border-radius: .35rem;
+}
+
 /* Toast polido */
 .toast { border-radius: .75rem; box-shadow: 0 14px 36px rgba(15,23,42,.10); }
+
+/* Overlay de acesso restrito */
+.access-overlay { position: fixed; inset: 0; background: rgba(255,255,255,.96); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+.access-card { background: #fff; border: 1px solid var(--border-color); border-radius: var(--border-radius); box-shadow: var(--shadow-md); padding: 1.25rem 1.5rem; max-width: 540px; text-align: center; }
+.access-card h3 { margin-top: 0; margin-bottom: .5rem; color: var(--secondary-color); }
+.access-card p { margin: 0; color: #475569; }
+.access-actions { margin-top: .85rem; }
 
 /* Layout responsivo refinado */
 @media (min-width: 992px) { .container { max-width: 1100px; } }
