@@ -1605,6 +1605,781 @@
     }).join('');
   };
 
+  // Agenda 2026 (Página agenda2026.html)
+  const agenda2026Body = qs('#agenda2026-body');
+  const btnImprimirAgenda2026 = qs('#btn-imprimir-agenda2026');
+  const btnExportarPdfAgenda2026 = qs('#btn-exportar-pdf-agenda2026');
+  const btnExportarXlsAgenda2026 = qs('#btn-exportar-xls-agenda2026');
+  const btnImportarAgenda2026 = qs('#btn-importar-agenda2026');
+  const fileImportAgenda2026 = qs('#file-import-agenda2026');
+  const btnNovoAgenda2026 = qs('#btn-novo-agenda2026');
+  const agendaForm = qs('#agenda2026-form');
+  const agendaSalvarBtn = qs('#agenda2026-salvar');
+  const agendaCancelarBtn = qs('#agenda2026-cancelar');
+  const agendaLimparBtn = qs('#agenda2026-limpar');
+  const agendaDataInp = qs('#agenda2026-data');
+  const agendaHoraInp = qs('#agenda2026-hora');
+  const agendaTipoSel = qs('#agenda2026-tipo');
+  const agendaSetorSel = qs('#agenda2026-setor');
+  const agendaDescInp = qs('#agenda2026-descricao');
+  const agendaCidadeInp = qs('#agenda2026-cidade');
+  const agendaCongInp = qs('#agenda2026-congregacao');
+  const agendaLocalSel = qs('#agenda2026-local');
+  const agendaPublicoInp = qs('#agenda2026-publico');
+  const agendaRespInp = qs('#agenda2026-responsavel');
+  // Botões de adicionar opção (+) e datalist de congregações
+  const btnAddTipo = qs('#btn-add-tipo');
+  const btnAddSetor = qs('#btn-add-setor');
+  const btnAddCidade = qs('#btn-add-cidade');
+  const agendaCongDatalist = qs('#agenda2026-congregacoes-list');
+  let agenda2026Cache = [];
+  let agendaEditId = null;
+
+  function formatAgendaDate(d){
+    if(!d) return '-';
+    const monthsAbbr = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    return `${String(d.getDate()).padStart(2,'0')}/${monthsAbbr[d.getMonth()]}`;
+  }
+  function parseDataAgendaValor(val){
+    try{
+      if(typeof val === 'number' && window.XLSX && XLSX.SSF){
+        const dc = XLSX.SSF.parse_date_code(val);
+        if(dc){ return new Date(2026, (dc.m||1)-1, dc.d||1); }
+      }
+      if(typeof val === 'string'){
+        const s = val.trim().toLowerCase();
+        const map = { jan:0, fev:1, mar:2, abr:3, mai:4, jun:5, jul:6, ago:7, set:8, out:9, nov:10, dez:11 };
+        let m=null, d=null;
+        let m1 = s.match(/^(\d{1,2})\s*\/?\s*([a-zç]{3})$/i);
+        if(m1){ d=parseInt(m1[1],10); const mm=map[m1[2].replace('ç','c')]; if(mm!==undefined) m=mm; }
+        if(m===null){
+          let m2 = s.match(/^(\d{1,2})\s*\/\s*(\d{1,2})(?:\/(\d{2,4}))?$/);
+          if(m2){ d=parseInt(m2[1],10); m=parseInt(m2[2],10)-1; }
+        }
+        if(m!==null && d!==null){ return new Date(2026, m, d); }
+      }
+    }catch{}
+    return null;
+  }
+  function horaDoEvento(ev){
+    try{
+      const d = parseDateYmdLocal(ev.data);
+      const cong = congregacoesByIdEvents[ev.congregacaoId];
+      const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+      const diaNome = d ? diasSemanaPt[d.getDay()] : '';
+      const tipoCulto = ev.tipo==='Culto Reforço de Coletas' ? 'Culto Oficial' : (ev.tipo==='RJM com Reforço de Coletas' ? 'RJM' : '');
+      if(cong && Array.isArray(cong.cultos)){
+        const match = cong.cultos.find(ct => ct.tipo===tipoCulto && ct.dia===diaNome);
+        if(match && match.horario) return match.horario;
+      }
+    }catch{}
+    return '-';
+  }
+  function labelCong(ev){
+    const cong = congregacoesByIdEvents[ev.congregacaoId];
+    return ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
+  }
+
+  function renderAgenda2026(){
+    if(!agenda2026Body) return;
+    const list = (agenda2026Cache||[]).slice().sort((a,b)=>{
+      const ad = parseDateYmdLocal(a.data) || parseDataAgendaValor(a.data) || new Date(2026,0,1);
+      const bd = parseDateYmdLocal(b.data) || parseDataAgendaValor(b.data) || new Date(2026,0,1);
+      return ad - bd;
+    });
+    if(!list.length){
+      agenda2026Body.innerHTML = '<tr><td colspan="8" class="text-muted">Nenhum serviço agendado para 2026</td></tr>';
+      return;
+    }
+    const daysAbbr = ['dom','seg','ter','qua','qui','sex','sáb'];
+    let n=1;
+    const daysFull = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    agenda2026Body.innerHTML = list.map(ev=>{
+      const d = parseDateYmdLocal(ev.data) || parseDataAgendaValor(ev.data);
+      const dataFmt = d ? formatAgendaDate(d) : '-';
+      const di = d ? daysAbbr[d.getDay()] : '-';
+      const diaTitle = d ? daysFull[d.getDay()] : '';
+      const hora = ev.hora || '-';
+      const cidade = ev.cidade || '-';
+      const localLabel = ev.congregacao || '-';
+      const today = new Date();
+      const dOnly = d ? new Date(d.getFullYear(), d.getMonth(), d.getDate()) : null;
+      const tOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const rowClass = dOnly && dOnly < tOnly ? 'event-past' : 'event-future';
+      const svcTipo = ev.tipo || ((ev.servico||'').split(' - ')[0] || '');
+      const svcDesc = ev.descricao || (function(){ const parts=(ev.servico||'').split(' - '); parts.shift(); return parts.join(' - '); })();
+      const slug = (svcTipo||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'outros';
+      return `<tr class="${rowClass}">
+        <td class="index-col">${n++}</td>
+        <td class="date-col"><span class="date">${dataFmt}</span></td>
+        <td class="day-col"><span class="badge-day" title="${diaTitle}">${di}</span></td>
+        <td class="time-col"><span class="time">${hora}</span></td>
+        <td class="service-col"><span class="servico"><span class="pill-servico servico-${slug}" title="${svcTipo||'-'}">${svcTipo||'-'}</span>${svcDesc?`<span class="servico-desc" title="${svcDesc}"> — ${svcDesc}</span>`:''}</span></td>
+        <td class="city-col"><span class="chip chip-cidade">${cidade}</span></td>
+        <td class="cong-col"><span class="congregacao-highlight">${localLabel}</span></td>
+        <td class="actions">
+          <button type="button" class="btn btn-sm btn-outline-primary btn-icon btn-edit-agenda2026" data-id="${ev.id}" title="Editar">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm15.71-9.04a1.003 1.003 0 0 0 0-1.42l-1.5-1.5a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.99-1.66z" fill="currentColor"/></svg>
+            <span class="visually-hidden">Editar</span>
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-danger btn-icon ms-1 btn-del-agenda2026" data-id="${ev.id}" title="Excluir">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/></svg>
+            <span class="visually-hidden">Excluir</span>
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function buildAgenda2026RowsHtml(list, withIndex=true){
+    const daysAbbr = ['dom','seg','ter','qua','qui','sex','sáb'];
+    let n=1;
+    return list.map(ev=>{
+      const d = parseDateYmdLocal(ev.data) || parseDataAgendaValor(ev.data);
+      const dataFmt = d ? formatAgendaDate(d) : '-';
+      const di = d ? daysAbbr[d.getDay()] : '-';
+      const hora = ev.hora || '-';
+      const cidade = ev.cidade || '-';
+      const localLabel = ev.congregacao || '-';
+      return `<tr>
+        ${withIndex?`<td>${n++}</td>`:''}
+        <td>${dataFmt}</td>
+        <td>${di}</td>
+        <td>${hora}</td>
+        <td>${ev.servico||ev.tipo||'-'}</td>
+        <td>${cidade}</td>
+        <td>${localLabel}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  if(agenda2026Body){
+    // Carregar dados e renderizar
+    readList('agenda2026', list => { agenda2026Cache = list; renderAgenda2026(); });
+
+    // Preencher sugestões (datalist) de Congregações a partir do cadastro existente
+    if(agendaCongDatalist){
+      readList('congregacoes', list => {
+        const labelFor = (c) => c.nomeFormatado || (c.cidade && c.bairro ? `${c.cidade} - ${c.bairro}` : (c.nome||c.id));
+        const sorted = [...(list||[])].sort((a,b)=> (labelFor(a)||'').localeCompare(labelFor(b)||'', undefined, { sensitivity: 'base' }));
+        agendaCongDatalist.innerHTML = '';
+        sorted.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = labelFor(c);
+          agendaCongDatalist.appendChild(opt);
+        });
+      });
+    }
+
+    // Função auxiliar para adicionar opção aos selects
+    function addOptionToSelect(selectEl, label){
+      if(!selectEl) return;
+      const norm = (s)=> String(s||'').trim();
+      const val = norm(label);
+      if(!val) return;
+      const exists = Array.from(selectEl.options||[]).some(o => norm(o.value).toLowerCase() === val.toLowerCase());
+      if(!exists){
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val;
+        selectEl.appendChild(opt);
+      }
+      selectEl.value = val;
+      if(typeof toast==='function') toast('Opção adicionada');
+    }
+
+    // Eventos dos botões "+" para adicionar novas opções
+    btnAddTipo && btnAddTipo.addEventListener('click', ()=>{
+      const v = prompt('Nova opção para Tipo de Serviço:');
+      if(v!=null) addOptionToSelect(agendaTipoSel, v);
+    });
+    btnAddSetor && btnAddSetor.addEventListener('click', ()=>{
+      const v = prompt('Nova opção para Setor:');
+      if(v!=null) addOptionToSelect(agendaSetorSel, v);
+    });
+    btnAddCidade && btnAddCidade.addEventListener('click', ()=>{
+      const v = prompt('Nova opção para Cidade:');
+      if(v!=null) addOptionToSelect(agendaCidadeInp, v);
+    });
+
+    // Formulário Novo agendamento
+    if(btnNovoAgenda2026 && agendaForm){
+      btnNovoAgenda2026.addEventListener('click', ()=>{
+        agendaForm.classList.toggle('hidden');
+        if(!agendaForm.classList.contains('hidden')){
+          agendaEditId = null;
+          (agendaForm && agendaForm.reset && agendaForm.reset());
+          if(!agendaDataInp.value){
+            // se já estamos em 2026, mantém hoje; senão padroniza 2026-01-01
+            const now = new Date();
+            const y = now.getFullYear()===2026 ? now.getFullYear() : 2026;
+            const m = String((now.getFullYear()===2026 ? now.getMonth()+1 : 1)).padStart(2,'0');
+            const d = String((now.getFullYear()===2026 ? now.getDate() : 1)).padStart(2,'0');
+            agendaDataInp.value = `${y}-${m}-${d}`;
+          }
+        }
+      });
+    }
+    if(agendaCancelarBtn && agendaForm){
+      agendaCancelarBtn.addEventListener('click', ()=>{
+        agendaEditId = null;
+        agendaForm.classList.add('hidden');
+      });
+    }
+    if(agendaLimparBtn){
+      agendaLimparBtn.addEventListener('click', ()=>{
+        agendaEditId = null;
+      });
+    }
+    if(agendaSalvarBtn){
+      agendaSalvarBtn.addEventListener('click', async ()=>{
+        try{
+          const data = (agendaDataInp && agendaDataInp.value)||'';
+          const hora = (agendaHoraInp && agendaHoraInp.value)||'';
+          const tipo = (agendaTipoSel && agendaTipoSel.value)||'';
+          const setor = (agendaSetorSel && agendaSetorSel.value)||'';
+          const descricao = (agendaDescInp && agendaDescInp.value)||'';
+          const cidade = (agendaCidadeInp && agendaCidadeInp.value)||'';
+          const congregacao = (agendaCongInp && agendaCongInp.value)||'';
+          const local = (agendaLocalSel && agendaLocalSel.value)||'';
+          const publico = (agendaPublicoInp && agendaPublicoInp.value)||'';
+          const responsavel = (agendaRespInp && agendaRespInp.value)||'';
+          if(!data || !hora || !tipo){ toast('Preencha Data, Hora e Tipo.', 'error'); return; }
+          const servico = tipo + (descricao ? ` - ${descricao}` : '');
+          if(agendaEditId){
+            await update('agenda2026', agendaEditId, { data, hora, tipo, setor, descricao, cidade, congregacao, local, publico, responsavel, servico });
+            toast('Registro atualizado');
+          }else{
+            await write('agenda2026', { data, hora, tipo, setor, descricao, cidade, congregacao, local, publico, responsavel, servico });
+            toast('Agendamento salvo');
+          }
+          (agendaForm && agendaForm.reset && agendaForm.reset());
+          agendaEditId = null;
+          agendaForm && agendaForm.classList.add('hidden');
+        }catch(err){ console.error(err); toast('Falha ao salvar agendamento', 'error'); }
+      });
+    }
+
+    // Ações Editar/Excluir na tabela
+    if(agenda2026Body){
+      agenda2026Body.addEventListener('click', async (e)=>{
+        const btn = e.target.closest('button');
+        if(!btn) return;
+        const id = btn.getAttribute('data-id');
+        if(!id) return;
+        if(btn.classList.contains('btn-edit-agenda2026')){
+          e.preventDefault();
+          try{
+            const ev = (agenda2026Cache||[]).find(x=>x.id===id);
+            if(!ev){ toast('Registro não encontrado', 'error'); return; }
+            agendaEditId = id;
+            if(agendaForm && agendaForm.reset){ agendaForm.reset(); }
+            agendaDataInp && (agendaDataInp.value = ev.data || '');
+            agendaHoraInp && (agendaHoraInp.value = ev.hora || '');
+            if(agendaTipoSel){
+              const val = ev.tipo || '';
+              if(val){
+                const exists = Array.from(agendaTipoSel.options||[]).some(o=>o.value===val);
+                if(!exists){ const opt=document.createElement('option'); opt.value=val; opt.textContent=val; agendaTipoSel.appendChild(opt); }
+              }
+              agendaTipoSel.value = val;
+            }
+            if(agendaSetorSel){
+              const val = ev.setor || '';
+              if(val){
+                const exists = Array.from(agendaSetorSel.options||[]).some(o=>o.value===val);
+                if(!exists){ const opt=document.createElement('option'); opt.value=val; opt.textContent=val; agendaSetorSel.appendChild(opt); }
+              }
+              agendaSetorSel.value = val;
+            }
+            agendaDescInp && (agendaDescInp.value = ev.descricao || '');
+            if(agendaCidadeInp){
+              const val = ev.cidade || '';
+              if(val && agendaCidadeInp.tagName==='SELECT'){
+                const exists = Array.from(agendaCidadeInp.options||[]).some(o=>o.value===val);
+                if(!exists){ const opt=document.createElement('option'); opt.value=val; opt.textContent=val; agendaCidadeInp.appendChild(opt); }
+              }
+              agendaCidadeInp.value = val;
+            }
+            agendaCongInp && (agendaCongInp.value = ev.congregacao || '');
+            agendaLocalSel && (agendaLocalSel.value = ev.local || '');
+            agendaPublicoInp && (agendaPublicoInp.value = ev.publico || '');
+            agendaRespInp && (agendaRespInp.value = ev.responsavel || '');
+            agendaForm && agendaForm.classList.remove('hidden');
+            toast('Editando registro...');
+          }catch(err){ console.error(err); toast('Falha ao carregar registro', 'error'); }
+        }else if(btn.classList.contains('btn-del-agenda2026')){
+          e.preventDefault();
+          if(!confirm('Deseja excluir este registro?')) return;
+          try{
+            await remove('agenda2026', id);
+            toast('Registro excluído');
+          }catch(err){ console.error(err); toast('Falha ao excluir', 'error'); }
+        }
+      });
+    }
+
+    // Importação XLS
+    if(btnImportarAgenda2026 && fileImportAgenda2026){
+      btnImportarAgenda2026.addEventListener('click', ()=> fileImportAgenda2026.click());
+      fileImportAgenda2026.addEventListener('change', async (e)=>{
+        const file = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if(!file) return;
+        try{
+          if(!window.XLSX){ toast('Biblioteca XLSX não carregada', 'error'); return; }
+          const buf = await file.arrayBuffer();
+          const wb = XLSX.read(buf, { type:'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true });
+          if(!rows || !rows.length){ toast('Planilha vazia', 'error'); return; }
+          let hIdx = 0;
+          for(let i=0;i<Math.min(10, rows.length); i++){
+            const r = (rows[i]||[]).map(v=>String(v||'').toLowerCase());
+            if(r.some(x=>x.includes('data')) && r.some(x=>x.includes('serv'))){ hIdx=i; break; }
+          }
+          const header = (rows[hIdx]||[]).map(v=>String(v||'').toLowerCase());
+          const col = {
+            data: header.findIndex(h=>h.includes('data')),
+            hora: header.findIndex(h=>h.startsWith('hor')),
+            serv: header.findIndex(h=>h.includes('serv')),
+            cid: header.findIndex(h=>h.includes('cidade')),
+            cong: header.findIndex(h=>h.includes('congreg')),
+          };
+          if(col.data<0 || col.serv<0 || col.cid<0 || col.cong<0){ toast('Cabeçalho não reconhecido. Verifique as colunas.', 'error'); return; }
+          const items = [];
+          for(let i=hIdx+1;i<rows.length;i++){
+            const r = rows[i]||[];
+            const vData = r[col.data];
+            const vServ = r[col.serv];
+            const vCid  = r[col.cid];
+            const vCong = r[col.cong];
+            const vHora = col.hora>=0? r[col.hora] : '';
+            if(!vData || !vServ) continue;
+            const d = parseDataAgendaValor(vData);
+            if(!d) continue;
+            const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            items.push({ data: ymd, servico: String(vServ||'').trim(), cidade: String(vCid||'').trim(), congregacao: String(vCong||'').trim(), hora: String(vHora||'').trim() });
+          }
+          if(!items.length){ toast('Nenhuma linha válida encontrada.', 'error'); return; }
+          const overwrite = confirm('Substituir registros atuais da Agenda 2026 pelo arquivo importado?');
+          if(overwrite){
+            for(const it of (agenda2026Cache||[])){
+              try{ await remove('agenda2026', it.id); }catch{}
+            }
+          }
+          for(const it of items){ await write('agenda2026', it); }
+          toast(`Importação concluída: ${items.length} itens`);
+        }catch(err){ console.error(err); toast('Falha ao importar XLS', 'error'); }
+      });
+    }
+
+    // Exportações
+    function getAgendaListSorted(){
+      return (agenda2026Cache||[]).slice().sort((a,b)=>{
+        const ad = parseDateYmdLocal(a.data) || parseDataAgendaValor(a.data) || new Date(2026,0,1);
+        const bd = parseDateYmdLocal(b.data) || parseDataAgendaValor(b.data) || new Date(2026,0,1);
+        return ad-bd;
+      });
+    }
+
+    btnImprimirAgenda2026 && btnImprimirAgenda2026.addEventListener('click', ()=>{
+      try{
+        const list = getAgendaListSorted();
+        if(!list.length){ toast('Sem registros de 2026 para imprimir', 'error'); return; }
+        const rows = buildAgenda2026RowsHtml(list, true);
+        const now = new Date();
+        const gerado = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><title>Agenda 2026</title>
+          <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;color:#000}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:0 0 12px;color:#333}table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:6px;font-size:12px}th{background:#f2f2f2}@media print{.no-print{display:none}}</style>
+        </head><body>
+          <h1>CONGREGAÇÃO CRISTÃ NO BRASIL</h1>
+          <h2>AGENDA DE REUNIÕES E SERVIÇOS 2026 — Administração | Ituiutaba</h2>
+          <p class="no-print">Gerado em: ${gerado}</p>
+          <table><thead><tr><th>Nº</th><th>Data</th><th>Di</th><th>Hor.</th><th>Serviço</th><th>Cidade</th><th>Congregação / Salão</th></tr></thead>
+          <tbody>${rows}</tbody></table>
+        </body></html>`;
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=url; a.download='agenda-2026.html'; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url); a.remove();},0);
+        toast('Arquivo gerado para impressão');
+      }catch(err){ console.error(err); toast('Falha ao gerar impressão', 'error'); }
+    });
+
+    btnExportarPdfAgenda2026 && btnExportarPdfAgenda2026.addEventListener('click', ()=>{
+      try{
+        const list = getAgendaListSorted();
+        if(!list.length){ toast('Sem registros de 2026 para exportar', 'error'); return; }
+        const rows = buildAgenda2026RowsHtml(list, true);
+        const html = `<!DOCTYPE html><html lang='pt-BR'><head><meta charset='UTF-8'/><title>Agenda 2026 - PDF</title>
+          <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;color:#000}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:0 0 12px;color:#333}table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:6px;font-size:12px}th{background:#f2f2f2}.no-print{margin:12px 0}@media print{.no-print{display:none}}</style>
+        </head><body>
+          <h1>CONGREGAÇÃO CRISTÃ NO BRASIL</h1>
+          <h2>AGENDA DE REUNIÕES E SERVIÇOS 2026 — Administração | Ituiutaba</h2>
+          <div class='no-print'>Use Ctrl+P e escolha "Salvar como PDF".</div>
+          <table><thead><tr><th>Nº</th><th>Data</th><th>Di</th><th>Hor.</th><th>Serviço</th><th>Cidade</th><th>Congregação / Salão</th></tr></thead>
+          <tbody>${rows}</tbody></table>
+          <script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 200); });</script>
+        </body></html>`;
+        const w = window.open('', '_blank');
+        if(!w){ toast('Popup bloqueado. Permita pop-ups.', 'error'); return; }
+        w.document.open(); w.document.write(html); w.document.close();
+      }catch(err){ console.error(err); toast('Falha ao exportar PDF', 'error'); }
+    });
+
+    btnExportarXlsAgenda2026 && btnExportarXlsAgenda2026.addEventListener('click', ()=>{
+      try{
+        const list = getAgendaListSorted();
+        if(!list.length){ toast('Sem registros de 2026 para exportar', 'error'); return; }
+        const rows = buildAgenda2026RowsHtml(list, true);
+        const xls = `<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body>
+          <table border='1'><thead><tr><th>Nº</th><th>Data</th><th>Di</th><th>Hor.</th><th>Serviço</th><th>Cidade</th><th>Congregação / Salão</th></tr></thead>
+          <tbody>${rows}</tbody></table></body></html>`;
+        const blob = new Blob([xls], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=url; a.download='agenda-2026.xls'; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url); a.remove();},0);
+        toast('Arquivo XLS gerado');
+      }catch(err){ console.error(err); toast('Falha ao exportar XLS', 'error'); }
+    });
+  }
+
+  // ===================== Dashboard (Página dashboard.html) =====================
+  const dashRoot = qs('#dashboard-root');
+  if(dashRoot){
+    const elYear = qs('#dash-year');
+    const elMonth = qs('#dash-month');
+    const elCidade = qs('#dash-cidade');
+    const elTipo = qs('#dash-tipo');
+    const elSetor = qs('#dash-setor');
+    const elDate = qs('#dash-date');
+    const elUpcomingOnly = qs('#dash-upcoming-only');
+    const btnClear = qs('#dash-clear');
+
+    const sumTotal = qs('#dash-sum-total');
+    const sumCidades = qs('#dash-sum-cidades');
+    const sumTipos = qs('#dash-sum-tipos');
+    const countInfo = qs('#dash-count');
+
+    const tableBody = qs('#dash-table-body');
+
+    const btnImprimirDash = qs('#btn-imprimir-dashboard');
+    const btnExportarPdfDash = qs('#btn-exportar-pdf-dashboard');
+    const btnExportarXlsDash = qs('#btn-exportar-xls-dashboard');
+
+    const cardDaily = qs('#dash-card-daily');
+    const ctxMonthly = qs('#dashChartMonthly') ? qs('#dashChartMonthly').getContext('2d') : null;
+    const ctxTipos = qs('#dashChartTipos') ? qs('#dashChartTipos').getContext('2d') : null;
+    const ctxDaily = qs('#dashChartDaily') ? qs('#dashChartDaily').getContext('2d') : null;
+    const ctxCidades = qs('#dashChartCidades') ? qs('#dashChartCidades').getContext('2d') : null;
+
+    const monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const fullWeek = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+    let all = [];
+    let filtered = [];
+    let chartMonthly = null, chartTipos = null, chartDaily = null, chartCidades = null;
+
+    function slug(str){
+      return (String(str||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')) || 'na';
+    }
+    function norm(str){ return String(str||'').trim(); }
+
+    function getTipoServicoItem(it){
+      const t = norm(it && it.tipo);
+      const s = norm(it && it.servico);
+      if(t) return t;
+      if(s && s.includes(' - ')) return s.split(' - ')[0];
+      return s || 'Outros';
+    }
+    function getServicoDescItem(it){
+      const d = norm(it && it.descricao);
+      const s = norm(it && it.servico);
+      if(d) return d;
+      if(s && s.includes(' - ')) return s.split(' - ').slice(1).join(' - ');
+      return '';
+    }
+
+    function parseDateYmdLocal(ymd){
+      if(!ymd) return null;
+      const m = String(ymd).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if(!m) return null;
+      const y = Number(m[1]), mo = Number(m[2])-1, d = Number(m[3]);
+      return new Date(y, mo, d);
+    }
+
+    function fillSelect(el, items, firstLabel='Todos'){
+      if(!el) return;
+      const opts = [`<option value="">${firstLabel}</option>`].concat(items.map(v=>`<option value="${v}">${v}</option>`));
+      el.innerHTML = opts.join('');
+    }
+
+    function initFilters(list){
+      const years = Array.from(new Set(list.map(it => (parseDateYmdLocal(it.data)||{}).getFullYear && parseDateYmdLocal(it.data).getFullYear()).filter(Boolean))).sort((a,b)=>a-b);
+      const tipos = Array.from(new Set(list.map(getTipoServicoItem).map(norm).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'pt'));
+      const setores = Array.from(new Set(list.map(it => norm(it.setor)).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'pt'));
+      const cidades = Array.from(new Set(list.map(it => norm(it.cidade)).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'pt'));
+
+      fillSelect(elYear, years.map(String),'Todos');
+      if(years.includes(2026)){ elYear.value = '2026'; }
+
+      fillSelect(elMonth, monthNames.map((n,i)=>String(i+1).padStart(2,'0')+': '+n), 'Todos');
+      // Normalizar valores do mês no formato MM na UI, mas guardamos apenas MM
+      if(elMonth){
+        // converter value exibido "MM: Nome" para apenas MM
+        const opts = Array.from(elMonth.options);
+        opts.forEach(o=>{ if(o.value){ o.value = o.value.slice(0,2); o.textContent = o.textContent.slice(4); }});
+      }
+
+      fillSelect(elTipo, tipos, 'Todos');
+      fillSelect(elSetor, setores, 'Todos');
+      fillSelect(elCidade, cidades, 'Todas');
+    }
+
+    function applyFilters(){
+      const y = elYear && elYear.value ? Number(elYear.value) : null;
+      const m = elMonth && elMonth.value ? Number(elMonth.value) : null;
+      const cid = norm(elCidade && elCidade.value);
+      const tp = norm(elTipo && elTipo.value);
+      const st = norm(elSetor && elSetor.value);
+      const dStr = elDate && elDate.value ? elDate.value : '';
+      const upcomingOnly = !!(elUpcomingOnly && elUpcomingOnly.checked);
+      const today = new Date(); today.setHours(0,0,0,0);
+
+      const by = all.filter(it => {
+        const d = parseDateYmdLocal(it.data);
+        if(!d) return false;
+        if(upcomingOnly && d.getTime() < today.getTime()) return false; // apenas próximos
+        const yy = d.getFullYear();
+        const mm = d.getMonth()+1;
+        if(y && yy !== y) return false;
+        if(m && mm !== m) return false;
+        if(dStr){
+          const f = parseDateYmdLocal(dStr);
+          if(!f) return false;
+          if(d.getFullYear()!==f.getFullYear() || d.getMonth()!==f.getMonth() || d.getDate()!==f.getDate()) return false;
+        }
+        if(cid && norm(it.cidade)!==cid) return false;
+        if(tp && norm(getTipoServicoItem(it))!==tp) return false;
+        if(st && norm(it.setor)!==st) return false;
+        return true;
+      });
+      return by;
+    }
+
+    function updateSummary(list){
+      if(sumTotal) sumTotal.textContent = String(list.length);
+      if(sumCidades) sumCidades.textContent = String(new Set(list.map(i=>norm(i.cidade)).filter(Boolean)).size);
+      if(sumTipos) sumTipos.textContent = String(new Set(list.map(i=>norm(getTipoServicoItem(i))).filter(Boolean)).size);
+      if(countInfo){
+        const y = elYear && elYear.value ? `Ano ${elYear.value}` : 'Todos os anos';
+        const m = elMonth && elMonth.value ? `, ${monthNames[Number(elMonth.value)-1]}` : '';
+        countInfo.textContent = `${list.length} registro(s) — ${y}${m}`;
+      }
+    }
+
+    function pad2(n){ return String(n).padStart(2,'0'); }
+
+    function renderTable(list){
+      if(!tableBody) return;
+      if(!list.length){ tableBody.innerHTML = '<tr><td colspan="7" class="text-muted">Nenhum dado para exibir</td></tr>'; return; }
+      const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+      const rows = list.slice().sort((a,b)=>{
+        const ad = parseDateYmdLocal(a.data) || new Date(2100,0,1);
+        const bd = parseDateYmdLocal(b.data) || new Date(2100,0,1);
+        if(ad-bd!==0) return ad-bd;
+        const ah = a.hora||''; const bh = b.hora||'';
+        return ah.localeCompare(bh);
+      }).map((it,idx)=>{
+        const d = parseDateYmdLocal(it.data);
+        const day = d ? days[d.getDay()] : '';
+        const ymd = d ? `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}` : it.data;
+        const hora = norm(it.hora);
+        const svcTipo = getTipoServicoItem(it);
+        const svcDesc = getServicoDescItem(it);
+        return `<tr>
+          <td>${idx+1}</td>
+          <td>${ymd}</td>
+          <td>${day}</td>
+          <td>${hora?`<span class="time">${hora}</span>`:''}</td>
+          <td><span class="pill-servico servico-${slug(svcTipo)}">${svcTipo}</span>${svcDesc?` <span class="servico-desc">— ${svcDesc}</span>`:''}</td>
+          <td>${norm(it.cidade)}</td>
+          <td>${norm(it.congregacao)}</td>
+        </tr>`;
+      }).join('');
+      tableBody.innerHTML = rows;
+    }
+
+    function ensureChart(inst, ctx, type, data, options){
+      if(!ctx || typeof Chart==='undefined') return inst;
+      if(inst){ inst.data = data; inst.options = options||{}; inst.update(); return inst; }
+      return new Chart(ctx, { type, data, options: options||{} });
+    }
+
+    function renderCharts(list){
+      // Monthly
+      const y = elYear && elYear.value ? Number(elYear.value) : null;
+      const monthsCount = new Array(12).fill(0);
+      list.forEach(it=>{
+        const d = parseDateYmdLocal(it.data);
+        if(!d) return;
+        if(y && d.getFullYear()!==y) return; // se ano filtrado, manter aderência do gráfico mensal
+        monthsCount[d.getMonth()]++;
+      });
+      chartMonthly = ensureChart(chartMonthly, ctxMonthly, 'bar', {
+        labels: monthNames,
+        datasets: [{ label:'Eventos/mês', data: monthsCount, backgroundColor:'#3b82f6' }]
+      }, { plugins:{ legend:{ display:false }}, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } } });
+
+      // Tipos
+      const tiposMap = {};
+      list.forEach(it=>{ const k = norm(getTipoServicoItem(it))||'Outros'; tiposMap[k]=(tiposMap[k]||0)+1; });
+      const tiposLabels = Object.keys(tiposMap).sort((a,b)=>tiposMap[b]-tiposMap[a]);
+      const tiposData = tiposLabels.map(l=>tiposMap[l]);
+      const colors = ['#0ea5e9','#22c55e','#f59e0b','#ef4444','#8b5cf6','#14b8a6','#eab308','#06b6d4','#f97316','#84cc16'];
+      chartTipos = ensureChart(chartTipos, ctxTipos, 'doughnut', {
+        labels: tiposLabels,
+        datasets: [{ data: tiposData, backgroundColor: tiposLabels.map((_,i)=>colors[i%colors.length]) }]
+      }, { plugins:{ legend:{ position:'bottom' } } });
+
+      // Cidades (Top 12)
+      const cidMap = {};
+      list.forEach(it=>{ const k = norm(it.cidade)||'—'; cidMap[k]=(cidMap[k]||0)+1; });
+      const cidEntries = Object.entries(cidMap).sort((a,b)=>b[1]-a[1]).slice(0,12);
+      chartCidades = ensureChart(chartCidades, ctxCidades, 'bar', {
+        labels: cidEntries.map(x=>x[0]),
+        datasets: [{ label:'Eventos', data: cidEntries.map(x=>x[1]), backgroundColor:'#10b981' }]
+      }, { indexAxis:'y', plugins:{ legend:{ display:false }}, scales:{ x:{ beginAtZero:true, ticks:{ precision:0 } } } });
+
+      // Daily (se um mês estiver selecionado)
+      const m = elMonth && elMonth.value ? Number(elMonth.value) : null;
+      if(m){
+        if(cardDaily) cardDaily.classList.remove('d-none');
+        const daily = new Array(31).fill(0);
+        const yearRef = y || (list[0] && (parseDateYmdLocal(list[0].data)||{}).getFullYear && parseDateYmdLocal(list[0].data).getFullYear());
+        list.forEach(it=>{
+          const d = parseDateYmdLocal(it.data); if(!d) return;
+          if(d.getMonth()+1!==m) return; if(y && d.getFullYear()!==y) return; if(!y && yearRef && d.getFullYear()!==yearRef) return;
+          daily[d.getDate()-1]++;
+        });
+        const daysLabels = daily.map((_,i)=>String(i+1));
+        chartDaily = ensureChart(chartDaily, ctxDaily, 'line', {
+          labels: daysLabels,
+          datasets: [{ label:'Eventos/dia', data: daily, borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,.25)', tension:.2, fill:true }]
+        }, { plugins:{ legend:{ display:false }}, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } } });
+      } else {
+        if(cardDaily) cardDaily.classList.add('d-none');
+        if(chartDaily){ chartDaily.destroy(); chartDaily = null; }
+      }
+    }
+
+    function buildRowsHtml(list){
+      const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+      function pad2(n){ return String(n).padStart(2,'0'); }
+      return list.slice().sort((a,b)=>{
+        const ad = parseDateYmdLocal(a.data) || new Date(2100,0,1);
+        const bd = parseDateYmdLocal(b.data) || new Date(2100,0,1);
+        if(ad-bd!==0) return ad-bd;
+        const ah = a.hora||''; const bh = b.hora||'';
+        return ah.localeCompare(bh);
+      }).map((it,idx)=>{
+        const d = parseDateYmdLocal(it.data);
+        const day = d ? days[d.getDay()] : '';
+        const ymd = d ? `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}` : it.data;
+        const hora = norm(it.hora);
+         const svcTipo = getTipoServicoItem(it);
+         return `<tr><td>${idx+1}</td><td>${ymd}</td><td>${day}</td><td>${hora||''}</td><td>${svcTipo}</td><td>${norm(it.cidade)}</td><td>${norm(it.congregacao)}</td></tr>`;
+      }).join('');
+    }
+
+    function render(){
+      filtered = applyFilters();
+      updateSummary(filtered);
+      renderTable(filtered);
+      renderCharts(filtered);
+    }
+
+    // Exportações do Dashboard
+    if(btnImprimirDash){
+      btnImprimirDash.addEventListener('click', ()=>{
+        try{
+          const list = filtered || [];
+          if(!list.length){ toast('Sem registros para imprimir', 'error'); return; }
+          const rows = buildRowsHtml(list);
+          const now = new Date();
+          const gerado = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+          const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><title>Dashboard - Eventos</title>
+            <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;color:#000}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:0 0 12px;color:#333}table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:6px;font-size:12px}th{background:#f2f2f2}@media print{.no-print{display:none}}</style>
+          </head><body>
+            <h1>CONGREGAÇÃO CRISTÃ NO BRASIL</h1>
+            <h2>Eventos (Filtros do Dashboard)</h2>
+            <p class="no-print">Gerado em: ${gerado}</p>
+            <table><thead><tr><th>Nº</th><th>Data</th><th>Di</th><th>Hor.</th><th>Serviço</th><th>Cidade</th><th>Congregação / Salão</th></tr></thead>
+            <tbody>${rows}</tbody></table>
+          </body></html>`;
+          const w = window.open('', '_blank');
+          if(!w){ toast('Popup bloqueado. Permita pop-ups.', 'error'); return; }
+          w.document.open(); w.document.write(html); w.document.close();
+        }catch(err){ console.error(err); toast('Falha ao gerar impressão', 'error'); }
+      });
+    }
+    if(btnExportarPdfDash){
+      btnExportarPdfDash.addEventListener('click', ()=>{
+        try{
+          const list = filtered || [];
+          if(!list.length){ toast('Sem registros para exportar', 'error'); return; }
+          const rows = buildRowsHtml(list);
+          const html = `<!DOCTYPE html><html lang='pt-BR'><head><meta charset='UTF-8'/><title>Dashboard - PDF</title>
+            <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;color:#000}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:0 0 12px;color:#333}table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:6px;font-size:12px}th{background:#f2f2f2}.no-print{margin:12px 0}@media print{.no-print{display:none}}</style>
+          </head><body>
+            <h1>CONGREGAÇÃO CRISTÃ NO BRASIL</h1>
+            <h2>Eventos — Dashboard</h2>
+            <div class='no-print'>Use Ctrl+P e escolha "Salvar como PDF".</div>
+            <table><thead><tr><th>Nº</th><th>Data</th><th>Di</th><th>Hor.</th><th>Serviço</th><th>Cidade</th><th>Congregação / Salão</th></tr></thead>
+            <tbody>${rows}</tbody></table>
+            <script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 200); });</script>
+          </body></html>`;
+          const w = window.open('', '_blank');
+          if(!w){ toast('Popup bloqueado. Permita pop-ups.', 'error'); return; }
+          w.document.open(); w.document.write(html); w.document.close();
+        }catch(err){ console.error(err); toast('Falha ao exportar PDF', 'error'); }
+      });
+    }
+    if(btnExportarXlsDash){
+      btnExportarXlsDash.addEventListener('click', ()=>{
+        try{
+          const list = filtered || [];
+          if(!list.length){ toast('Sem registros para exportar', 'error'); return; }
+          const rows = buildRowsHtml(list);
+          const xls = `<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body>
+            <table border='1'><thead><tr><th>Nº</th><th>Data</th><th>Di</th><th>Hor.</th><th>Serviço</th><th>Cidade</th><th>Congregação / Salão</th></tr></thead>
+            <tbody>${rows}</tbody></table></body></html>`;
+          const blob = new Blob([xls], { type: 'application/vnd.ms-excel' });
+          const url = URL.createObjectURL(blob);
+          const a=document.createElement('a'); a.href=url; a.download='dashboard-eventos.xls'; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url); a.remove();},0);
+          toast('Arquivo XLS gerado');
+        }catch(err){ console.error(err); toast('Falha ao exportar XLS', 'error'); }
+      });
+    }
+
+    [elYear, elMonth, elCidade, elTipo, elSetor, elDate].forEach(el=>{ if(el) el.addEventListener('input', render); });
+      if(elUpcomingOnly) elUpcomingOnly.addEventListener('change', render);
+      if(btnClear){ btnClear.addEventListener('click', ()=>{
+        if(elYear) elYear.value='';
+        if(elMonth) elMonth.value='';
+        if(elCidade) elCidade.value='';
+        if(elTipo) elTipo.value='';
+        if(elSetor) elSetor.value='';
+        if(elDate) elDate.value='';
+        render();
+      }); }
+
+    readList('agenda2026', list => {
+      all = list || [];
+      try{ initFilters(all); }catch(err){ console.error(err); }
+      render();
+    });
+  }
+
 }());
   function renderTabelaReforcos(){
     if (typeof window !== 'undefined' && typeof window._renderTabelaReforcosInner === 'function') {
