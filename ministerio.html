@@ -9,6 +9,7 @@
   <!-- Firebase SDK (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 <body class="bg-light">
   <header class="app-header bg-white shadow-sm">
@@ -123,5 +124,72 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>
+  <script>
+    (function(){
+      const restrictedPages = ['ministerio.html','relatorios.html','congregacoes.html','agendar.html'];
+      const page = (location.pathname.split('/').pop()||'').toLowerCase();
+      if(!restrictedPages.includes(page)) return;
+      function showOverlay(message, showLogin){
+        let ov = document.getElementById('access-overlay');
+        if(!ov){
+          ov = document.createElement('div');
+          ov.id = 'access-overlay';
+          ov.className = 'access-overlay';
+          ov.innerHTML = '<div class="access-card"><h3>Acesso restrito</h3><p class="access-msg"></p><div class="access-actions"></div></div>';
+          document.body.appendChild(ov);
+        }
+        const msgEl = ov.querySelector('.access-msg');
+        if(msgEl) msgEl.textContent = message || 'Esta página é restrita.';
+        const actions = ov.querySelector('.access-actions');
+        if(actions) actions.innerHTML = '';
+        if(showLogin && window.firebase && firebase.auth){
+          const btn = document.createElement('button');
+          btn.className = 'btn btn-primary';
+          btn.textContent = 'Entrar com Google';
+          btn.addEventListener('click', async ()=>{
+            try{
+              const provider = new firebase.auth.GoogleAuthProvider();
+              const res = await firebase.auth().signInWithPopup(provider);
+              const email = (res.user && res.user.email) ? res.user.email.toLowerCase() : '';
+              if(email === 'viniciuscarvalhoccb@gmail.com'){
+                ov.remove();
+              } else {
+                showOverlay('Acesso negado para este usuário.', false);
+                await firebase.auth().signOut();
+              }
+            }catch(err){
+              console.error(err);
+              showOverlay('Falha ao autenticar. Tente novamente.', true);
+            }
+          });
+          actions && actions.appendChild(btn);
+        }
+      }
+      function enforce(){
+        try{
+          if(!window.firebase || !firebase.auth){
+            showOverlay('Configuração de autenticação ausente. Contate o administrador.', false);
+            return;
+          }
+          firebase.auth().onAuthStateChanged(user=>{
+            if(!user){
+              showOverlay('Faça login com Google para acessar.', true);
+              return;
+            }
+            const email = (user.email||'').toLowerCase();
+            if(email === 'viniciuscarvalhoccb@gmail.com'){
+              const ov = document.getElementById('access-overlay'); ov && ov.remove();
+            } else {
+              showOverlay('Acesso negado para este usuário.', false);
+            }
+          });
+        }catch(err){
+          console.error(err);
+          showOverlay('Erro ao verificar acesso.', true);
+        }
+      }
+      enforce();
+    })();
+  </script>
 </body>
 </html>
