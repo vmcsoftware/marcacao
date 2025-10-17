@@ -61,8 +61,34 @@
     <!-- Eventos -->
     <section id="tab-eventos" class="tab-panel active" role="tabpanel" aria-labelledby="Eventos">
       <div class="card shadow-sm p-3 mb-3">
-        <h2>Cadastrar Evento</h2>
-        <form id="form-evento" class="form-grid">
+        <div class="grid-2">
+          <div>
+            <h2>Cadastrar Evento</h2>
+            <form id="form-evento" class="form-grid">
+          <label>
+            Congregação
+            <select name="congregacaoId" id="evento-congregacao" required>
+              <option value="">Selecionar...</option>
+            </select>
+          </label>
+          <div class="full">
+            <h4 class="meta">Dias de Cultos da Congregação</h4>
+            <table class="table table-sm" id="evento-cultos">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Dia</th>
+                  <th>Horário</th>
+                  <th>Próxima Data</th>
+                </tr>
+              </thead>
+              <tbody id="evento-cultos-body">
+                <tr>
+                  <td colspan="4" class="text-muted">Selecione uma congregação</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
           <label>
             Tipo do Evento
             <select name="tipo" required>
@@ -80,21 +106,36 @@
               <option value="">Selecionar (lista do Ministério)...</option>
             </select>
           </label>
-          <label>
-            Congregação
-            <select name="congregacaoId" id="evento-congregacao" required>
-              <option value="">Selecionar...</option>
-            </select>
-          </label>
           <label class="full">
             Observações
             <textarea name="observacoes" rows="3" placeholder="Detalhes, observações..."></textarea>
           </label>
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Salvar Evento</button>
-            <button type="reset" class="btn btn-outline-secondary">Limpar</button>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Salvar Evento</button>
+                <button type="reset" class="btn btn-outline-secondary">Limpar</button>
+              </div>
+            </form>
           </div>
-        </form>
+          <div>
+            <h4 class="meta">Reforços de Coletas</h4>
+            <table class="table table-sm" id="tabela-reforcos">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Hora</th>
+                  <th>Local</th>
+                  <th>Quem atende</th>
+                  <th>Tipo</th>
+                </tr>
+              </thead>
+              <tbody id="tabela-reforcos-body">
+                <tr>
+                  <td colspan="5" class="text-muted">Nenhum reforço cadastrado</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
       <div class="card shadow-sm p-3 mb-3">
         <h3>Eventos Cadastrados</h3>
