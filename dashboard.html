@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Administração CCB Ituiutaba - Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    /* Dashboard - estilos específicos */
+    .dash-filters .form-select, .dash-filters .form-control { min-width: 140px; }
+    .dash-card kpi { display:block; font-size: .9rem; color:#64748b; }
+    .dash-card strong { font-size: 1.6rem; }
+    .chart-card { min-height: 360px; }
+    .chart-wrap { position: relative; height: 320px; }
+    .table-responsive { max-height: 55vh; overflow: auto; }
+    .dash-section-title { font-size: 1rem; font-weight: 600; color:#334155; margin-bottom: .5rem; }
+    .muted { color:#64748b; }
+    #dash-card-daily.d-none { display:none !important; }
+  </style>
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+  <header class="app-header bg-white shadow-sm">
+    <div class="brand">
+      <div>
+        <h1>Administração CCB Ituiutaba</h1>
+        <p>Dashboard de Eventos</p>
+      </div>
+    </div>
+    <nav class="tabs nav nav-tabs" role="tablist">
+      <a class="nav-link tab" href="index.html" id="tab-btn-eventos">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M7 10h10v2H7zm0 4h7v2H7z" fill="currentColor"/><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" fill="currentColor"/></svg>
+        </span>
+        Atendimento
+      </a>
+      <a class="nav-link tab" href="ministerio.html" id="tab-btn-ministerio">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.33 0-8 2.17-8 5v1h16v-1c0-2.83-3.67-5-8-5z" fill="currentColor"/></svg>
+        </span>
+        Ministério
+      </a>
+      <a class="nav-link tab" href="congregacoes.html" id="tab-btn-congregacoes">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 3l9 7-1.5 2L12 7 4.5 12 3 10z" fill="currentColor"/><path d="M5 13v7h5v-4h4v4h5v-7l-7-5z" fill="currentColor"/></svg>
+        </span>
+        Congregações
+      </a>
+      <a class="nav-link tab" href="relatorios.html" id="tab-btn-relatorios">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 13h6v8H3zm12-10h6v18h-6zM9 3h6v18H9z" fill="currentColor"/></svg>
+        </span>
+        Relatórios
+      </a>
+      <a class="nav-link tab" href="agenda2026.html" id="tab-btn-agenda2026" title="Agenda 2026">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6c0-1.1-.9-2-2-2z" fill="currentColor"/></svg>
+        </span>
+        Agenda 2026
+      </a>
+      <a class="nav-link tab active" href="dashboard.html" id="tab-btn-dashboard" title="Dashboard">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 13h6v8H3zM10 3h4v18h-4zM15 9h6v12h-6z" fill="currentColor"/></svg>
+        </span>
+        Dashboard
+      </a>
+    </nav>
+  </header>
+
+  <main id="dashboard-root" class="content container my-3">
+    <section class="card shadow-sm p-3 mb-3">
+      <div class="d-flex justify-content-between align-items-end flex-wrap">
+        <div>
+          <h2 class="mb-1">Visão Geral dos Eventos</h2>
+          <div class="text-muted">Ano, mês e dia — com filtros e gráficos</div>
+        </div>
+      </div>
+
+      <div class="dash-filters row g-2 mt-3 align-items-end">
+        <div class="col-6 col-md-2">
+          <label for="dash-year" class="form-label">Ano</label>
+          <select id="dash-year" class="form-select"></select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label for="dash-month" class="form-label">Mês</label>
+          <select id="dash-month" class="form-select"></select>
+        </div>
+        <div class="col-6 col-md-3">
+          <label for="dash-cidade" class="form-label">Cidade</label>
+          <select id="dash-cidade" class="form-select"></select>
+        </div>
+        <div class="col-6 col-md-3">
+          <label for="dash-tipo" class="form-label">Tipo de Serviço</label>
+          <select id="dash-tipo" class="form-select"></select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label for="dash-setor" class="form-label">Setor</label>
+          <select id="dash-setor" class="form-select"></select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label for="dash-date" class="form-label">Dia</label>
+          <input id="dash-date" type="date" class="form-control" />
+        </div>
+        <div class="col-6 col-md-2">
+          <div class="form-check mt-4">
+            <input class="form-check-input" type="checkbox" id="dash-upcoming-only" checked />
+            <label class="form-check-label" for="dash-upcoming-only">Apenas próximos</label>
+          </div>
+        </div>
+        <div class="col-12 col-md-2">
+          <button id="dash-clear" type="button" class="btn btn-outline-secondary w-100">Limpar</button>
+        </div>
+      </div>
+    </section
+
+    ><section class="card shadow-sm p-3 mb-3">
+      <div class="d-flex justify-content-end align-items-center">
+        <div class="btn-group">
+          <button type="button" id="btn-imprimir-dashboard" class="btn btn-sm btn-outline-primary">Imprimir</button>
+          <button type="button" id="btn-exportar-pdf-dashboard" class="btn btn-sm btn-outline-secondary" title="Exportar em PDF">PDF</button>
+          <button type="button" id="btn-exportar-xls-dashboard" class="btn btn-sm btn-outline-secondary" title="Exportar em XLS">XLS</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-3">
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <div class="card shadow-sm p-3 dash-card">
+            <div class="muted">Eventos</div>
+            <strong id="dash-sum-total">0</strong>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="card shadow-sm p-3 dash-card">
+            <div class="muted">Cidades</div>
+            <strong id="dash-sum-cidades">0</strong>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="card shadow-sm p-3 dash-card">
+            <div class="muted">Tipos de Serviço</div>
+            <strong id="dash-sum-tipos">0</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="row g-3 mb-3">
+      <div class="col-12 col-lg-6">
+        <div class="card shadow-sm p-3 chart-card">
+          <div class="dash-section-title">Distribuição por Mês</div>
+          <div class="chart-wrap">
+            <canvas id="dashChartMonthly"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="card shadow-sm p-3 chart-card">
+          <div class="dash-section-title">Tipos de Serviço</div>
+          <div class="chart-wrap">
+            <canvas id="dashChartTipos"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-12" id="dash-card-daily">
+        <div class="card shadow-sm p-3 chart-card">
+          <div class="dash-section-title">Distribuição diária do mês selecionado</div>
+          <div class="chart-wrap">
+            <canvas id="dashChartDaily"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="card shadow-sm p-3 chart-card">
+          <div class="dash-section-title">Cidades</div>
+          <div class="chart-wrap">
+            <canvas id="dashChartCidades"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card shadow-sm p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="dash-section-title mb-0">Eventos Filtrados</div>
+        <div class="muted" id="dash-count"></div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Data</th>
+              <th>Di</th>
+              <th>Hor.</th>
+              <th>Serviço</th>
+              <th>Cidade</th>
+              <th>Congregação / Salão</th>
+            </tr>
+          </thead>
+          <tbody id="dash-table-body">
+            <tr><td colspan="7" class="text-muted">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
