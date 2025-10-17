@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agendamento de Coletas</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-light">
+  <header class="app-header bg-white shadow-sm">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="brand-icon">
+        <path d="M12 2l4 7h7l-5.5 4 2.1 7L12 16l-7.6 4 2.1-7L1 9h7z" fill="#1e88e5"/>
+      </svg>
+      <div>
+        <h1>Administração CCB Ituiutaba</h1>
+        <p>Agendamento de Coletas</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="content container my-4">
+    <section class="card shadow-sm p-4">
+      <h2 class="mb-1">Caro irmão, A Paz de Deus!</h2>
+      <p class="text-muted mb-3">Agende seu atendimento</p>
+      <p id="agendar-hint" class="text-muted hidden mb-3"></p>
+
+      <div class="mb-3">
+        <div id="agendar-grid" class="d-flex flex-wrap gap-2"></div>
+      </div>
+
+      <form id="agendar-form" class="form-grid hidden">
+        <div class="full mb-2"><strong>Congregação:</strong> <span id="agendar-cong-label"></span></div>
+        <input type="hidden" id="agendar-cong-id" />
+        <label>
+          Tipo
+          <select id="agendar-tipo" required>
+            <option value="Culto Reforço de Coletas">Culto Reforço de Coletas</option>
+            <option value="RJM com Reforço de Coletas">RJM com Reforço de Coletas</option>
+          </select>
+        </label>
+        <label>
+          Data
+          <input type="date" id="agendar-data" required />
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Salvar</button>
+          <button type="button" id="agendar-cancelar" class="btn btn-outline-secondary">Cancelar</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <footer class="app-footer text-muted bg-white border-top py-3">
+    <small>© 2025 Administração CCB Ituiutaba • </small>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
