@@ -154,6 +154,8 @@
   const eventoCultosBody = qs('#evento-cultos-body');
   const tabelaReforcosBody = qs('#tabela-reforcos-body');
   const btnImprimirEventos = qs('#btn-imprimir-eventos');
+  const btnExportarPdfEventos = qs('#btn-exportar-pdf-eventos');
+  const btnExportarXlsEventos = qs('#btn-exportar-xls-eventos');
   // Relatórios
   const relEventosEl = qs('#relatorio-eventos');
   const relMinisterioEl = qs('#relatorio-ministerio');
@@ -220,6 +222,24 @@
       // bloquear apenas duplicidade de CO na MESMA congregação e mês.
       try{
         const newDate = parseDateYmdLocal(data.data);
+        // Bloqueio: se já houver qualquer atendimento nesta congregação nesta data
+        const sameDaySameCong = (eventosCache||[]).some(ev => {
+          if(editId && ev.id === editId) return false;
+          return ev.congregacaoId === data.congregacaoId && ev.data === data.data;
+        });
+        if(sameDaySameCong){
+          toast('ALERTA: já existe atendimento nesta congregação nesta data.', 'error');
+          return;
+        }
+        // Bloqueio: RJM somente se a congregação possuir RJM cadastrado
+        if(data.tipo === 'RJM com Reforço de Coletas'){
+          const cong = congregacoesByIdEvents[data.congregacaoId];
+          const hasRjm = cong && Array.isArray(cong.cultos) && cong.cultos.some(ct => ct.tipo === 'RJM');
+          if(!hasRjm){
+            toast('Esta congregação não tem RJM.', 'error');
+            return;
+          }
+        }
         const sameMonthSameCong = (eventosCache||[]).filter(ev => {
           if(editId && ev.id === editId) return false;
           if(ev.congregacaoId !== data.congregacaoId) return false;
@@ -227,10 +247,33 @@
           return d && newDate && d.getFullYear() === newDate.getFullYear() && d.getMonth() === newDate.getMonth();
         });
         if(data.tipo === 'Culto Reforço de Coletas'){
-          const existsCO = sameMonthSameCong.some(ev => ev.tipo === 'Culto Reforço de Coletas');
-          if(existsCO){
-            toast('Já existe coleta em Culto Oficial nesta congregação neste mês.', 'error');
-            return;
+          const cSel = congregacoesByIdEvents[data.congregacaoId];
+          const nomeFmt = ((cSel && cSel.nomeFormatado)||'').toLowerCase();
+          const cidade = ((cSel && cSel.cidade)||'').toLowerCase();
+          const bairro = ((cSel && cSel.bairro)||'').toLowerCase();
+          const isItuiCentro = (cidade === 'ituiutaba' && bairro === 'centro') || (nomeFmt.includes('ituiutaba') && nomeFmt.includes('centro'));
+          const coList = sameMonthSameCong.filter(ev => ev.tipo === 'Culto Reforço de Coletas');
+          if(isItuiCentro){
+            if(coList.length >= 2){
+              toast('Ituiutaba Centro: máximo de 2 coletas em Culto Oficial no mês.', 'error');
+              return;
+            }
+            const isThu = newDate && newDate.getDay() === 4;
+            if(!isThu){
+              const nonThuAlready = coList.some(ev=>{
+                const dEv = parseDateYmdLocal(ev.data);
+                return dEv && dEv.getDay() !== 4;
+              });
+              if(nonThuAlready){
+                toast('Ituiutaba Centro: dos 2 reforços, pelo menos 1 deve ser na quinta-feira (Culto Oficial).', 'error');
+                return;
+              }
+            }
+          } else {
+            if(coList.length >= 1){
+              toast('Já existe coleta em Culto Oficial nesta congregação neste mês.', 'error');
+              return;
+            }
           }
         }
         // RJM liberado por mês em todas as congregações (sem bloqueio por congregação)
@@ -454,12 +497,138 @@
     });
   }
 
+  // Exportação em PDF (salvar via diálogo de impressão)
+  if(btnExportarPdfEventos){
+    btnExportarPdfEventos.addEventListener('click', ()=>{
+      try{
+        const reforcos = (eventosCache||[]).slice().sort((a,b)=>{
+          const ad = parseDateYmdLocal(a.data) || new Date(a.data);
+          const bd = parseDateYmdLocal(b.data) || new Date(b.data);
+          return ad - bd;
+        });
+        if(!reforcos.length){ toast('Nenhum atendimento para exportar', 'error'); return; }
+        const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+        const rowsHtml = reforcos.map(ev => {
+          const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+          const diaNome = diasSemanaPt[d.getDay()];
+          const cong = congregacoesByIdEvents[ev.congregacaoId];
+          const localLabel = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
+          const tipoCulto = ev.tipo==='Culto Reforço de Coletas' ? 'Culto Oficial' : (ev.tipo==='RJM com Reforço de Coletas' ? 'RJM' : '');
+          let hora = '-';
+          if(cong && Array.isArray(cong.cultos)){
+            const match = cong.cultos.find(ct => ct.tipo===tipoCulto && ct.dia===diaNome);
+            if(match && match.horario) hora = match.horario;
+          }
+          const atendente = (ev.atendenteNome||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          return `<tr>
+            <td>${diaNome} - ${formatDate(ev.data)}</td>
+            <td>${hora}</td>
+            <td>${localLabel}</td>
+            <td>${atendente}${ev.atendenteOutraRegiao ? ' <span class="flag-outra-regiao" title="Irmão de outra região"><svg viewBox="0 0 24 24"><path d="M12 2c-4.4 0-8 3.1-8 7 0 5 8 13 8 13s8-8 8-13c0-3.9-3.6-7-8-7zm0 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" fill="currentColor"/></svg></span>' : ''}</td>
+            <td>${ev.tipo}</td>
+          </tr>`;
+        }).join('');
+        const html = `<!DOCTYPE html>
+<html lang='pt-BR'>
+<head>
+  <meta charset='UTF-8' />
+  <title>Atendimentos - PDF</title>
+  <style>
+    body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#000; margin:24px; }
+    h1{ font-size: 18px; margin: 0 0 8px; }
+    table{ width:100%; border-collapse: collapse; }
+    th, td{ border:1px solid #000; padding:6px; font-size:12px; }
+    th{ background:#f2f2f2; }
+    .no-print{ margin:12px 0; }
+    @media print{ .no-print{ display:none; } }
+  </style>
+</head>
+<body>
+  <h1>Atendimentos Cadastrados</h1>
+  <div class='no-print'>Use Ctrl+P e escolha "Salvar como PDF".</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Hora</th>
+        <th>Local</th>
+        <th>Quem atende</th>
+        <th>Tipo</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+  <script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 200); });</script>
+</body>
+</html>`;
+        const w = window.open('', '_blank');
+        if(!w){ toast('Não foi possível abrir a janela de impressão (pop-up bloqueado)', 'error'); return; }
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+        toast('Abra a caixa de impressão e salve em PDF');
+      }catch(err){ console.error(err); toast('Falha ao exportar em PDF', 'error'); }
+    });
+  }
+
+  // Exportação em XLS (Excel)
+  if(btnExportarXlsEventos){
+    btnExportarXlsEventos.addEventListener('click', ()=>{
+      try{
+        const reforcos = (eventosCache||[]).slice().sort((a,b)=>{
+          const ad = parseDateYmdLocal(a.data) || new Date(a.data);
+          const bd = parseDateYmdLocal(b.data) || new Date(b.data);
+          return ad - bd;
+        });
+        if(!reforcos.length){ toast('Nenhum atendimento para exportar', 'error'); return; }
+        const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+        const rowsHtml = reforcos.map(ev => {
+          const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+          const diaNome = diasSemanaPt[d.getDay()];
+          const cong = congregacoesByIdEvents[ev.congregacaoId];
+          const localLabel = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
+          const tipoCulto = ev.tipo==='Culto Reforço de Coletas' ? 'Culto Oficial' : (ev.tipo==='RJM com Reforço de Coletas' ? 'RJM' : '');
+          let hora = '-';
+          if(cong && Array.isArray(cong.cultos)){
+            const match = cong.cultos.find(ct => ct.tipo===tipoCulto && ct.dia===diaNome);
+            if(match && match.horario) hora = match.horario;
+          }
+          const atendente = (ev.atendenteNome||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          return `<tr>
+            <td>${diaNome} - ${formatDate(ev.data)}</td>
+            <td>${hora}</td>
+            <td>${localLabel}</td>
+            <td>${atendente}</td>
+            <td>${ev.tipo}</td>
+          </tr>`;
+        }).join('');
+        const xlsHtml = `<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body>
+          <table border='1'>
+            <thead><tr><th>Data</th><th>Hora</th><th>Local</th><th>Quem atende</th><th>Tipo</th></tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </body></html>`;
+        const blob = new Blob([xlsHtml], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'atendimentos.xls';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+        toast('Arquivo XLS gerado');
+      }catch(err){ console.error(err); toast('Falha ao exportar XLS', 'error'); }
+    });
+  }
+
   // Popular congregações no select de evento
   function fillSelect(sel, list, labelKey){
     if(!sel) return;
+    const makeLabel = (x) => x[labelKey] || x.nomeFormatado || (x.cidade && x.bairro ? `${x.cidade} - ${x.bairro}` : (x.nome||''));
+    const sorted = [...(list||[])].sort((a,b)=> (makeLabel(a)||'').localeCompare(makeLabel(b)||'', undefined, { sensitivity: 'base' }));
     sel.innerHTML = '<option value="">Selecionar...</option>' +
-      list.map(x => {
-        const label = x[labelKey] || x.nomeFormatado || (x.cidade && x.bairro ? `${x.cidade} - ${x.bairro}` : (x.nome||''));
+      sorted.map(x => {
+        const label = makeLabel(x);
         return `<option value="${x.id}">${label}</option>`;
       }).join('');
   }
@@ -1244,7 +1413,8 @@
     // Carregar congregações e renderizar botões
     readList('congregacoes', list => {
       const labelFor = (c) => c.nomeFormatado || (c.cidade && c.bairro ? `${c.cidade} - ${c.bairro}` : (c.nome||c.id));
-      agendarGrid.innerHTML = list.map(c => 
+      const sorted = [...(list||[])].sort((a,b)=> (labelFor(a)||'').localeCompare(labelFor(b)||'', undefined, { sensitivity: 'base' }));
+      agendarGrid.innerHTML = sorted.map(c => 
          `<button type="button" class="btn btn-outline-primary agendar-cong-btn" data-id="${c.id}">
            <span class="icon" aria-hidden="true">
              <svg viewBox="0 0 24 24"><path d="M12 3l9 7-1.5 2L12 7 4.5 12 3 10z" fill="currentColor"/><path d="M5 13v7h5v-4h4v4h5v-7l-7-5z" fill="currentColor"/></svg>
@@ -1269,7 +1439,7 @@
         const hint = qs('#agendar-hint');
         if(hint){
           if(label==='Ituiutaba - Centro'){
-            hint.textContent = 'Obs: Ituiutaba - Centro deve ser agendado na quinta-feira (Culto Oficial).';
+            hint.textContent = 'Obs: Ituiutaba - Centro pode agendar 2 coletas por mês; uma deve ser na quinta-feira (Culto Oficial).';
             hint.classList.remove('hidden');
           } else {
             hint.textContent = '';
@@ -1293,22 +1463,59 @@
         const c = congregacoesByIdEvents[congId];
         const label = c ? (c.nomeFormatado || (c.cidade && c.bairro ? `${c.cidade} - ${c.bairro}` : (c.nome||congId))) : congId;
 
-        // Exceção: Ituiutaba - Centro -> CO deve ser na quinta-feira
-        if(label==='Ituiutaba - Centro' && tipo==='Culto Reforço de Coletas'){
-          const d = parseDateYmdLocal(data);
-          if(!d || d.getDay() !== 4){ toast('Ituiutaba - Centro: Culto Oficial deve ser na quinta-feira.', 'error'); return; }
+        // Bloqueio: RJM somente se a congregação possuir RJM cadastrado
+        if(tipo === 'RJM com Reforço de Coletas'){
+          const hasRjm = c && Array.isArray(c.cultos) && c.cultos.some(ct => ct.tipo === 'RJM');
+          if(!hasRjm){ toast('Esta congregação não tem RJM.', 'error'); return; }
         }
+        // Bloqueio: se já houver qualquer atendimento nesta congregação nesta data
+        const sameDaySameCong = (eventosCache||[]).some(ev => ev.congregacaoId === congId && ev.data === data);
+        if(sameDaySameCong){ toast('ALERTA: já existe atendimento nesta congregação nesta data.', 'error'); return; }
+
+        // Exceção anterior substituída: ver regra abaixo que permite até 2 CO/mês em Ituiutaba Centro com exigência de ao menos uma quinta-feira.
 
         const dNew = parseDateYmdLocal(data);
         const sameMonthSameCong = (eventosCache||[]).filter(ev=>{
           const dEv = parseDateYmdLocal(ev.data);
           return ev.congregacaoId===congId && dEv && dNew && dEv.getFullYear()===dNew.getFullYear() && dEv.getMonth()===dNew.getMonth();
         });
-        // Regra: permitir múltiplas coletas, mas bloquear duplicidade por tipo (CO/RJM) na mesma congregação/mês
-        const typeAlready = sameMonthSameCong.some(ev => ev.tipo===tipo);
-        if(typeAlready){
-          toast('Já existe este tipo agendado nesta congregação neste mês.', 'error');
-          return;
+        // Regra: permitir múltiplas coletas; duplicidade por tipo bloqueada,
+        // exceto para Ituiutaba Centro em 'Culto Reforço de Coletas' (máx. 2 no mês, com ao menos um na quinta)
+        if(tipo==='Culto Reforço de Coletas'){
+          const cSel = congregacoesByIdEvents[congId];
+          const nomeFmt = ((cSel && cSel.nomeFormatado)||'').toLowerCase();
+          const cidade = ((cSel && cSel.cidade)||'').toLowerCase();
+          const bairro = ((cSel && cSel.bairro)||'').toLowerCase();
+          const isItuiCentro = (cidade === 'ituiutaba' && bairro === 'centro') || (nomeFmt.includes('ituiutaba') && nomeFmt.includes('centro'));
+          const coList = sameMonthSameCong.filter(ev=>ev.tipo==='Culto Reforço de Coletas');
+          if(isItuiCentro){
+            if(coList.length >= 2){
+              toast('Ituiutaba Centro: máximo de 2 coletas em Culto Oficial no mês.', 'error');
+              return;
+            }
+            const isThu = dNew && dNew.getDay() === 4;
+            if(!isThu){
+              const nonThuAlready = coList.some(ev=>{
+                const dEv = parseDateYmdLocal(ev.data);
+                return dEv && dEv.getDay() !== 4;
+              });
+              if(nonThuAlready){
+                toast('Ituiutaba Centro: dos 2 reforços, pelo menos 1 deve ser na quinta-feira (Culto Oficial).', 'error');
+                return;
+              }
+            }
+          } else {
+            if(coList.length >= 1){
+              toast('Já existe coleta em Culto Oficial nesta congregação neste mês.', 'error');
+              return;
+            }
+          }
+        } else {
+          const typeAlready = sameMonthSameCong.some(ev => ev.tipo===tipo);
+          if(typeAlready){
+            toast('Já existe este tipo agendado nesta congregação neste mês.', 'error');
+            return;
+          }
         }
 
         // Atendente: lista do Ministério ou outra região (manual)
