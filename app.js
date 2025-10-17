@@ -53,7 +53,10 @@
     'cad-evento': () => setActiveTab('eventos'),
     'cad-ministerio': () => setActiveTab('ministerio'),
     'cad-congregacao': () => setActiveTab('congregacoes'),
-    'ver-relatorios': () => setActiveTab('relatorios'),
+    'ver-relatorios': () => { setActiveTab('relatorios'); renderRelatorios(); },
+    'rel-resumo-eventos': () => { setActiveTab('relatorios'); renderRelatorioEventos(); },
+    'rel-ministerio-funcao': () => { setActiveTab('relatorios'); renderRelatorioMinisterio(); },
+    'rel-total-congregacoes': () => { setActiveTab('relatorios'); renderRelatorioCongregacoes(); },
   };
   function setActiveTab(id){
     tabs.forEach(b => b.classList.remove('active'));
@@ -75,6 +78,9 @@
   ];
   const relMenu = [
     {id:'ver-relatorios', label:'Ver Relatórios'},
+    {id:'rel-resumo-eventos', label:'Resumo de Eventos'},
+    {id:'rel-ministerio-funcao', label:'Ministério por Função'},
+    {id:'rel-total-congregacoes', label:'Total de Congregações'},
   ];
 
   const btnEventos = qs('#tab-btn-eventos');
@@ -147,6 +153,10 @@
   const atendenteManualInput = qs('#evento-atendente-manual');
   const eventoCultosBody = qs('#evento-cultos-body');
   const tabelaReforcosBody = qs('#tabela-reforcos-body');
+  // Relatórios
+  const relEventosEl = qs('#relatorio-eventos');
+  const relMinisterioEl = qs('#relatorio-ministerio');
+  const relCongregacoesEl = qs('#relatorio-congregacoes');
   let eventosCache = [];
   let congregacoesCacheEvents = [];
   let congregacoesByIdEvents = {};
@@ -604,6 +614,57 @@
       const msg = (err && (err.code||err.message)) || 'Falha ao vincular Ministério';
       toast(msg, 'error');
     }
+  }
+
+  // Relatórios: render helpers
+  function renderRelatorios(){
+    renderRelatorioEventos();
+    renderRelatorioMinisterio();
+    renderRelatorioCongregacoes();
+  }
+  function renderRelatorioEventos(){
+    if(!relEventosEl) return;
+    const list = eventosCache || [];
+    if(!list.length){
+      relEventosEl.innerHTML = '<li class="text-muted">Nenhum evento cadastrado</li>';
+      return;
+    }
+    const porTipo = list.reduce((acc, ev)=>{ acc[ev.tipo] = (acc[ev.tipo]||0)+1; return acc; }, {});
+    const porCong = list.reduce((acc, ev)=>{
+      const cong = congregacoesByIdEvents[ev.congregacaoId];
+      const label = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
+      acc[label] = (acc[label]||0)+1;
+      return acc;
+    }, {});
+    const lines = [];
+    lines.push(`Total de eventos: ${list.length}`);
+    Object.keys(porTipo).sort().forEach(k=> { lines.push(`${k}: ${porTipo[k]}`); });
+    Object.keys(porCong).sort().forEach(k=> { lines.push(`${k}: ${porCong[k]}`); });
+    relEventosEl.innerHTML = lines.map(s=> `<li>${s}</li>`).join('');
+  }
+  function renderRelatorioMinisterio(){
+    if(!relMinisterioEl) return;
+    const list = ministryCache || [];
+    if(!list.length){
+      relMinisterioEl.innerHTML = '<li class="text-muted">Nenhum irmão cadastrado</li>';
+      return;
+    }
+    const counts = list.reduce((acc, m)=>{ const f=m.funcao||'Sem função'; acc[f]= (acc[f]||0)+1; return acc; }, {});
+    const order = ['Ancião','Diácono','Cooperador Oficial','Cooperador de Jovens','Encarregado Regional'];
+    const lines = [];
+    lines.push(`Total no Ministério: ${list.length}`);
+    order.forEach(f=> { if(counts[f]) lines.push(`${f}: ${counts[f]}`); });
+    Object.keys(counts).filter(f=> !order.includes(f)).sort().forEach(f=> { lines.push(`${f}: ${counts[f]}`); });
+    relMinisterioEl.innerHTML = lines.map(s=> `<li>${s}</li>`).join('');
+  }
+  function renderRelatorioCongregacoes(){
+    if(!relCongregacoesEl) return;
+    const list = congregacoesCache || [];
+    if(!list.length){
+      relCongregacoesEl.textContent = 'Nenhuma congregação cadastrada';
+      return;
+    }
+    relCongregacoesEl.textContent = `Total de congregações cadastradas: ${list.length}`;
   }
 
   // Editar Ministério: delegar clique e carregar no formulário
