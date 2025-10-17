@@ -1016,8 +1016,13 @@
     readList('congregacoes', list => {
       const labelFor = (c) => c.nomeFormatado || (c.cidade && c.bairro ? `${c.cidade} - ${c.bairro}` : (c.nome||c.id));
       agendarGrid.innerHTML = list.map(c => 
-        `<button type="button" class="btn btn-outline-primary agendar-cong-btn" data-id="${c.id}">${labelFor(c)}</button>`
-      ).join('');
+         `<button type="button" class="btn btn-outline-primary agendar-cong-btn" data-id="${c.id}">
+           <span class="icon" aria-hidden="true">
+             <svg viewBox="0 0 24 24"><path d="M12 3l9 7-1.5 2L12 7 4.5 12 3 10z" fill="currentColor"/><path d="M5 13v7h5v-4h4v4h5v-7l-7-5z" fill="currentColor"/></svg>
+           </span>
+           <span class="agendar-label">${labelFor(c)}</span>
+         </button>`
+       ).join('');
       congregacoesByIdEvents = {};
       list.forEach(c => { congregacoesByIdEvents[c.id] = c; });
 
