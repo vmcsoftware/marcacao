@@ -124,7 +124,11 @@
           <div>
             <div class="d-flex justify-content-between align-items-center mb-2">
               <h4 class="meta mb-0">Atendimentos Cadastrados</h4>
-              <button type="button" id="btn-imprimir-eventos" class="btn btn-sm btn-outline-primary">Imprimir Atendimentos</button>
+              <div class="d-flex align-items-center">
+                <button type="button" id="btn-imprimir-eventos" class="btn btn-sm btn-outline-primary">Imprimir</button>
+                <button type="button" id="btn-exportar-pdf-eventos" class="btn btn-sm btn-outline-secondary ms-2" title="Exportar em PDF">PDF</button>
+                <button type="button" id="btn-exportar-xls-eventos" class="btn btn-sm btn-outline-secondary ms-2" title="Exportar em XLS">XLS</button>
+              </div>
             </div>
             <table class="table table-sm" id="tabela-reforcos">
               <thead>
