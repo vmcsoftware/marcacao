@@ -64,6 +64,67 @@ legend{padding:0 .5rem; color:var(--muted)}
 .repeatable .remove:hover{background:#fee2e2}
 
 /* Buttons */
+/* Modern UI enhancements */
+/* Subtle elevation, soft transitions, and cleaner tables/buttons */
+.btn{border-radius:.6rem; transition:transform .06s ease, box-shadow .18s ease, border-color .18s ease}
+.btn:hover{transform:translateY(-1px); box-shadow:0 6px 18px rgba(30,136,229,.14); border-color:#67a7e8}
+.btn:active{transform:translateY(0); box-shadow:0 2px 8px rgba(0,0,0,.08)}
+
+.table.table-sm{border:1px solid var(--border); border-radius:.5rem; overflow:hidden}
+.table.table-sm thead th{background:#f8fafc; font-weight:600}
+.table.table-sm tbody tr:hover{background:#f8fafc}
+
+.card{box-shadow:0 10px 26px rgba(0,0,0,.08)}
+
+/* Agendar page */
+#agendar-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:.75rem}
+.agendar-cong-btn{background:#fff; border:1px solid var(--border); color:var(--text); border-radius:.8rem; padding:.75rem 1rem; height:60px; display:inline-flex; align-items:center; justify-content:center; font-weight:600; letter-spacing:.2px; transition:transform .06s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease}
+.agendar-cong-btn:hover{border-color:#67a7e8; background:#f9fbff; box-shadow:0 8px 24px rgba(30,136,229,.12); transform:translateY(-1px)}
+.agendar-cong-btn:active{transform:translateY(0); box-shadow:0 2px 8px rgba(0,0,0,.08)}
+
+/* Toast polish */
+.toast{border-radius:.75rem}
+
+/* Inputs polish */
+input, select, textarea{transition:border-color .18s ease, box-shadow .18s ease}
+
+/* Headings balance */
+.brand h1{letter-spacing:.2px}
+.tab:hover{border-color:#cbd5e1; background:#f8fafc}
+.tab.active{background:#e9f3fe; border-color:#67a7e8; color:#0b5ed7}
+.icon{width:20px; height:20px}
+/* Estilo para Bootstrap nav-link nas abas */
+.tabs .nav-link{color:var(--text); border:1px solid var(--border); background:#fff; border-radius:.5rem}
+.tabs .nav-link:hover{background:#f8fafc; border-color:#cbd5e1}
+.tabs .nav-link.active{background:#e9f3fe; border-color:#67a7e8; color:#0b5ed7; box-shadow:0 4px 10px rgba(30,136,229,.15)}
+
+/* Content */
+.content{max-width:1100px; margin:1rem auto; padding:0 1rem}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Cards */
+.card{background:var(--card); border:1px solid var(--border); border-radius:.75rem; padding:1rem; margin-bottom:1rem; box-shadow:0 8px 24px rgba(0,0,0,.06)}
+.card h2{margin-top:0}
+
+/* Forms */
+.form-grid{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:1rem}
+.form-grid .full{grid-column:1/-1}
+label{display:flex; flex-direction:column; gap:.375rem; font-size:.95rem}
+input, select, textarea{width:100%; padding:.5rem .75rem; border-radius:.5rem; border:1px solid var(--border); background:#fff; color:var(--text)}
+input:focus, select:focus, textarea:focus{outline:2px solid rgba(30,136,229,.25); border-color:#67a7e8; box-shadow:0 0 0 3px rgba(30,136,229,.08)}
+fieldset{border:1px dashed var(--border); border-radius:.75rem; padding:1rem; background:#fafafa}
+legend{padding:0 .5rem; color:var(--muted)}
+.checks{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:.5rem}
+.grid-2{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:1rem}
+
+/* Repeatable */
+.repeatable{display:flex; flex-direction:column; gap:.5rem}
+.repeatable .row{display:grid; grid-template-columns:1.2fr 1fr .5fr auto; gap:.5rem}
+.repeatable .remove{background:#fff; border:1px solid var(--border); color:#dc2626; border-radius:.5rem; padding:.25rem .5rem; cursor:pointer}
+.repeatable .remove:hover{background:#fee2e2}
+
+/* Buttons */
 /* Ajuste leve para evitar conflito com Bootstrap */
 .btn{display:inline-flex; align-items:center; gap:.5rem}
 .form-actions{display:flex; gap:.5rem}
