@@ -159,7 +159,14 @@
               }
             }catch(err){
               console.error(err);
-              showOverlay('Falha ao autenticar. Tente novamente.', true);
+              if(err && err.code === 'auth/unauthorized-domain'){
+                const host = location.hostname;
+                showOverlay(`Domínio não autorizado (${host}). Autorize este domínio em Firebase Console > Authentication > Settings > Authorized domains (adicione também localhost/127.0.0.1 se necessário).`, false);
+              } else if(err && (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user')){
+                showOverlay('Popup de login bloqueado/fechado. Permita pop-ups e tente novamente.', true);
+              } else {
+                showOverlay('Falha ao autenticar. Tente novamente.', true);
+              }
             }
           });
           actions && actions.appendChild(btn);
