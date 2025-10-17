@@ -49,11 +49,12 @@
         </span>
         Relatórios
       </a>
-      <a class="nav-link tab" href="agendar.html" id="tab-btn-agendar" title="Agendar">
+
+      <a class="nav-link tab" href="dashboard.html" id="tab-btn-dashboard" title="Dashboard">
         <span class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6c0-1.1-.9-2-2-2zm-5 8h-3v3H9v-3H6v-2h3V7h2v3h3v2z" fill="currentColor"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M3 13h6v8H3zM10 3h4v18h-4zM15 9h6v12h-6z" fill="currentColor"/></svg>
         </span>
-        Agendar
+        Dashboard
       </a>
     </nav>
   </header>
@@ -126,7 +127,7 @@
   <script src="app.js"></script>
   <script>
     (function(){
-      const restrictedPages = ['ministerio.html','relatorios.html','congregacoes.html','agendar.html'];
+      const restrictedPages = ['ministerio.html','relatorios.html','congregacoes.html'];
       const page = (location.pathname.split('/').pop()||'').toLowerCase();
       if(!restrictedPages.includes(page)) return;
       function showOverlay(message, showLogin){
