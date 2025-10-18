@@ -158,8 +158,20 @@
   const btnExportarXlsEventos = qs('#btn-exportar-xls-eventos');
   // Relatórios
   const relEventosEl = qs('#relatorio-eventos');
-  const relMinisterioEl = qs('#relatorio-ministerio');
-  const relCongregacoesEl = qs('#relatorio-congregacoes');
+const relMinisterioEl = qs('#relatorio-ministerio');
+const relCongregacoesEl = qs('#relatorio-congregacoes');
+// Filtros e botões de Relatórios
+const relYearSel = qs('#rel-year');
+const relMonthSel = qs('#rel-month');
+const relCidadeSel = qs('#rel-cidade');
+const relTipoSel = qs('#rel-tipo');
+const btnRelApply = qs('#rel-apply');
+const btnRelClear = qs('#rel-clear');
+const btnRelPrint = qs('#rel-print');
+const btnRelPdf = qs('#rel-print-pdf');
+const btnRelXls = qs('#rel-export-xls');
+btnRelApply && btnRelApply.addEventListener('click', ()=>{ if(typeof renderRelatorios==='function') renderRelatorios(); });
+btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYearSel.value=''; if(relMonthSel) relMonthSel.value=''; if(relCidadeSel) relCidadeSel.value=''; if(relTipoSel) relTipoSel.value=''; if(typeof renderRelatorios==='function') renderRelatorios(); });
   let eventosCache = [];
   let congregacoesCacheEvents = [];
   let congregacoesByIdEvents = {};
@@ -335,6 +347,10 @@
 
     readList('eventos', list => {
       eventosCache = list;
+      if(relEventosEl || btnRelPrint || relYearSel || relCidadeSel || relTipoSel){
+        try{ if(typeof initRelatoriosFilters==='function') initRelatoriosFilters(); }catch{}
+        try{ if(typeof renderRelatorios==='function') renderRelatorios(); }catch{}
+      }
       if(!listaEventos) return;
       const sorted = [...list].sort((a,b)=>{
         const ad = parseDateYmdLocal(a.data) || new Date(a.data);
@@ -1023,6 +1039,61 @@
   }
 
   // Relatórios: render helpers
+  function cidadeDoEventoRel(ev){
+    const cong = (typeof congregacoesByIdEvents!=='undefined' && congregacoesByIdEvents) ? congregacoesByIdEvents[ev.congregacaoId] : null;
+    if(cong && cong.cidade) return cong.cidade;
+    const label = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
+    const parts = (label||'').split(' - ');
+    return parts[0]||'';
+  }
+  function getRelEventosFiltrados(){
+    const all = eventosCache || [];
+    const y = relYearSel && relYearSel.value ? parseInt(relYearSel.value,10) : null;
+    const m = relMonthSel && relMonthSel.value ? parseInt(relMonthSel.value,10) : null;
+    const cidade = relCidadeSel && relCidadeSel.value ? relCidadeSel.value : '';
+    const tipo = relTipoSel && relTipoSel.value ? relTipoSel.value : '';
+    return all.filter(ev=>{
+      const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+      if(y && (!d || d.getFullYear() !== y)) return false;
+      if(m && (!d || (d.getMonth()+1) !== m)) return false;
+      if(cidade && cidadeDoEventoRel(ev) !== cidade) return false;
+      if(tipo && ev.tipo !== tipo) return false;
+      return true;
+    }).sort((a,b)=>{
+      const ad = parseDateYmdLocal(a.data) || new Date(a.data);
+      const bd = parseDateYmdLocal(b.data) || new Date(b.data);
+      return ad - bd;
+    });
+  }
+  function initRelatoriosFilters(){
+    if(!(relYearSel||relMonthSel||relCidadeSel||relTipoSel)) return;
+    const list = eventosCache || [];
+    const anos = new Set();
+    const cidades = new Set();
+    const tipos = new Set();
+    list.forEach(ev=>{
+      const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+      if(d && !isNaN(d)) anos.add(d.getFullYear());
+      const c = cidadeDoEventoRel(ev);
+      if(c) cidades.add(c);
+      if(ev.tipo) tipos.add(ev.tipo);
+    });
+    if(relYearSel){
+      const sel = relYearSel.value;
+      relYearSel.innerHTML = '<option value="">Todos</option>' + Array.from(anos).sort((a,b)=>a-b).map(y=> `<option value="${y}">${y}</option>`).join('');
+      if(sel) relYearSel.value = sel;
+    }
+    if(relCidadeSel){
+      const sel = relCidadeSel.value;
+      relCidadeSel.innerHTML = '<option value="">Todas</option>' + Array.from(cidades).sort((a,b)=> a.localeCompare(b,'pt-BR')).map(c=> `<option value="${c}">${c}</option>`).join('');
+      if(sel) relCidadeSel.value = sel;
+    }
+    if(relTipoSel){
+      const sel = relTipoSel.value;
+      relTipoSel.innerHTML = '<option value="">Todos</option>' + Array.from(tipos).sort((a,b)=> a.localeCompare(b,'pt-BR')).map(t=> `<option value="${t}">${t}</option>`).join('');
+      if(sel) relTipoSel.value = sel;
+    }
+  }
   function renderRelatorios(){
     renderRelatorioEventos();
     renderRelatorioMinisterio();
@@ -1030,7 +1101,7 @@
   }
   function renderRelatorioEventos(){
     if(!relEventosEl) return;
-    const list = eventosCache || [];
+    const list = (typeof getRelEventosFiltrados === 'function') ? getRelEventosFiltrados() : (eventosCache || []);
     if(!list.length){
       relEventosEl.innerHTML = '<li class="text-muted">Nenhum atendimento cadastrado</li>';
       return;
@@ -1071,6 +1142,95 @@
       return;
     }
     relCongregacoesEl.textContent = `Total de congregações cadastradas: ${list.length}`;
+  }
+
+  // Relatórios: impressão e exportação com filtros aplicados
+  function buildRowsHtmlFromEventos(list){
+    const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    return (list||[]).map(ev => {
+      const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+      const diaNome = d ? diasSemanaPt[d.getDay()] : '-';
+      const cong = (typeof congregacoesByIdEvents!=='undefined' && congregacoesByIdEvents) ? congregacoesByIdEvents[ev.congregacaoId] : null;
+      const localLabel = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
+      const hora = (typeof horaDoEvento==='function' ? (horaDoEvento(ev)||'-') : '-');
+      const atendente = (ev.atendenteNome||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return `<tr>
+        <td>${diaNome} - ${formatDate(ev.data)}</td>
+        <td>${hora}</td>
+        <td>${localLabel}</td>
+        <td>${atendente}${ev.atendenteOutraRegiao ? ' <span class="flag-outra-regiao" title="Irmão de outra região"><svg viewBox="0 0 24 24"><path d="M12 2c-4.4 0-8 3.1-8 7 0 5 8 13 8 13s8-8 8-13c0-3.9-3.6-7-8-7zm0 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" fill="currentColor"/></svg></span>' : ''}</td>
+        <td>${ev.tipo||'-'}</td>
+      </tr>`;
+    }).join('');
+  }
+  if(btnRelPrint){
+    btnRelPrint.addEventListener('click', ()=>{
+      try{
+        const list = (typeof getRelEventosFiltrados==='function') ? getRelEventosFiltrados() : (eventosCache||[]);
+        if(!list.length){ toast('Nenhum atendimento para imprimir', 'error'); return; }
+        const rowsHtml = buildRowsHtmlFromEventos(list);
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2,'0');
+        const mm = String(now.getMonth()+1).padStart(2,'0');
+        const yyyy = now.getFullYear();
+        const hh = String(now.getHours()).padStart(2,'0');
+        const mi = String(now.getMinutes()).padStart(2,'0');
+        const geradoEm = `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+        const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><title>Relatório de Atendimentos</title>
+<style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;color:#000}h1{font-size:18px;margin:0 0 8px}p{font-size:12px;margin:0 0 12px;color:#333}table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:6px;font-size:12px}th{background:#f2f2f2}@media print{.no-print{display:none}}</style>
+</head><body>
+<h1>Relatório de Atendimentos</h1>
+<p>Gerado em: ${geradoEm}</p>
+<table><thead><tr><th>Data</th><th>Hora</th><th>Local</th><th>Quem atende</th><th>Tipo</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+</body></html>`;
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'relatorio-eventos-filtrados.html'; document.body.appendChild(a); a.click();
+        setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+        toast('Arquivo gerado para impressão');
+      }catch(err){ console.error(err); toast('Falha ao gerar arquivo de impressão', 'error'); }
+    });
+  }
+  if(btnRelPdf){
+    btnRelPdf.addEventListener('click', ()=>{
+      try{
+        const list = (typeof getRelEventosFiltrados==='function') ? getRelEventosFiltrados() : (eventosCache||[]);
+        if(!list.length){ toast('Nenhum atendimento para exportar', 'error'); return; }
+        const rowsHtml = buildRowsHtmlFromEventos(list);
+        const html = `<!DOCTYPE html><html lang='pt-BR'><head><meta charset='UTF-8'/><title>Relatórios - PDF</title>
+<style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;color:#000;margin:24px}h1{font-size:18px;margin:0 0 8px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:6px;font-size:12px}th{background:#f2f2f2}.no-print{margin:12px 0}@media print{.no-print{display:none}}</style>
+</head><body>
+<h1>Relatórios - Atendimentos</h1>
+<div class='no-print'>Use Ctrl+P e escolha "Salvar como PDF".</div>
+<table><thead><tr><th>Data</th><th>Hora</th><th>Local</th><th>Quem atende</th><th>Tipo</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+<script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 200); });</script>
+</body></html>`;
+        const w = window.open('', '_blank');
+        if(!w){ toast('Não foi possível abrir a janela de impressão (pop-up bloqueado)', 'error'); return; }
+        w.document.open(); w.document.write(html); w.document.close();
+        toast('Abra a caixa de impressão e salve em PDF');
+      }catch(err){ console.error(err); toast('Falha ao exportar em PDF', 'error'); }
+    });
+  }
+  if(btnRelXls){
+    btnRelXls.addEventListener('click', ()=>{
+      try{
+        const list = (typeof getRelEventosFiltrados==='function') ? getRelEventosFiltrados() : (eventosCache||[]);
+        if(!list.length){ toast('Nenhum atendimento para exportar', 'error'); return; }
+        const rowsHtml = buildRowsHtmlFromEventos(list);
+        const xlsHtml = `<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body>
+          <table border='1'>
+            <thead><tr><th>Data</th><th>Hora</th><th>Local</th><th>Quem atende</th><th>Tipo</th></tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </body></html>`;
+        const blob = new Blob([xlsHtml], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'relatorio-eventos-filtrados.xls'; document.body.appendChild(a); a.click();
+        setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+        toast('Arquivo XLS gerado');
+      }catch(err){ console.error(err); toast('Falha ao exportar XLS', 'error'); }
+    });
   }
 
   // Editar/Excluir Ministério: delegar clique para editar ou remover
@@ -2043,7 +2203,149 @@
     });
   }
 
-  // ===================== Dashboard (Página dashboard.html) =====================
+  // ===================== Agenda Mensal (Página agenda.html) =====================
+  const agendaMonthRoot = qs('#agenda-month-root');
+  if (agendaMonthRoot) {
+    const agendaMonthLabel = qs('#agenda-month-label');
+    const agendaMonthGrid = qs('#agenda-month-grid');
+    const agendaTodayBtn = qs('#agenda-today-btn');
+
+    let viewDate = new Date();
+    let eventosCal = [];
+    let agenda2026Cal = [];
+    let congregacoesReady = false;
+
+    function monthLabel(d) {
+      const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+      return `${meses[d.getMonth()]} de ${d.getFullYear()}`;
+    }
+
+    function yyyyMmDd(d) {
+      const m = `${d.getMonth()+1}`.padStart(2,'0');
+      const day = `${d.getDate()}`.padStart(2,'0');
+      return `${d.getFullYear()}-${m}-${day}`;
+    }
+
+    function sameYmd(a, b) {
+      return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+    }
+
+    function normalizeEventosForMonth(list) {
+      return (list || []).map(ev => {
+        const d = parseDateYmdLocal(ev.data);
+        const hora = horaDoEvento(ev) || '';
+        const titulo = labelCong(ev) || (ev.congregacaoNome || '');
+        const tipo = ev.tipo || 'Evento';
+        return { fonte: 'atendimento', data: d, ymd: yyyyMmDd(d), hora, titulo, tipo };
+      });
+    }
+
+    function normalizeAgenda2026ForMonth(list) {
+      return (list || []).map(item => {
+        const d = parseDataAgendaValor(item.data);
+        if (!d || isNaN(d)) return null;
+        const hora = item.hora || horaDoEvento(item) || '';
+        const titulo = labelCong(item) || (item.congregacaoNome || '');
+        const tipo = item.tipo || item.servico || 'Agenda';
+        return { fonte: 'agenda2026', data: d, ymd: yyyyMmDd(d), hora, titulo, tipo };
+      }).filter(Boolean);
+    }
+
+    function eventsByDayInView() {
+      const y = viewDate.getFullYear();
+      const m = viewDate.getMonth();
+      const map = new Map();
+      const push = (evt) => {
+        if (!evt || !evt.data || isNaN(evt.data)) return;
+        if (evt.data.getFullYear() !== y || evt.data.getMonth() !== m) return;
+        const key = evt.ymd;
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(evt);
+      };
+      eventosCal.forEach(push);
+      agenda2026Cal.forEach(push);
+      // ordenar por hora, quando houver
+      for (const arr of map.values()) {
+        arr.sort((a,b) => (a.hora||'').localeCompare(b.hora||''));
+      }
+      return map;
+    }
+
+    function renderCalendar() {
+      if (!agendaMonthLabel || !agendaMonthGrid) return;
+      agendaMonthLabel.textContent = monthLabel(viewDate);
+
+      const first = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+      const start = new Date(first);
+      // domingo como início da semana
+      start.setDate(first.getDate() - first.getDay());
+      const today = new Date();
+      const byDay = eventsByDayInView();
+
+      let html = '';
+      for (let i = 0; i < 42; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const inMonth = d.getMonth() === viewDate.getMonth();
+        const isToday = sameYmd(d, today);
+        const key = yyyyMmDd(d);
+        const dayEvents = byDay.get(key) || [];
+
+        html += '<div class="cal-cell">';
+        html += '<div class="cal-day">';
+        if (isToday) {
+          html += `<span class="today">${d.getDate()}</span>`;
+        } else {
+          html += `<span class="${inMonth ? '' : 'muted'}">${d.getDate()}</span>`;
+        }
+        html += '</div>';
+
+        if (dayEvents.length) {
+          for (const evt of dayEvents.slice(0, 4)) {
+            const hora = evt.hora ? `<span class="meta">${evt.hora}</span>` : '';
+            const tipo = `<span class="pill">${evt.tipo}</span>`;
+            html += `<div class="event">${tipo}<span class="title">${evt.titulo}</span>${hora}</div>`;
+          }
+          if (dayEvents.length > 4) {
+            html += `<div class="event"><span class="meta">+${dayEvents.length-4} mais…</span></div>`;
+          }
+        }
+
+        html += '</div>';
+      }
+      agendaMonthGrid.innerHTML = html;
+    }
+
+    // Carregamentos
+    readList('congregacoes', (list) => {
+      congregacoesByIdEvents = {};
+      (list || []).forEach(c => { congregacoesByIdEvents[c.id] = c; });
+      congregacoesReady = true;
+      renderCalendar();
+    });
+
+    readList('eventos', (list) => {
+      eventosCal = normalizeEventosForMonth(list);
+      renderCalendar();
+    });
+
+    readList('agenda2026', (list) => {
+      agenda2026Cal = normalizeAgenda2026ForMonth(list);
+      renderCalendar();
+    });
+
+    if (agendaTodayBtn) {
+      agendaTodayBtn.addEventListener('click', () => {
+        viewDate = new Date();
+        renderCalendar();
+      });
+    }
+
+    // primeira render após DOM
+    renderCalendar();
+  }
+
+// ===================== Dashboard (Página dashboard.html) =====================
   const dashRoot = qs('#dashboard-root');
   if(dashRoot){
     const elYear = qs('#dash-year');
