@@ -2053,6 +2053,7 @@
     const elSetor = qs('#dash-setor');
     const elDate = qs('#dash-date');
     const elUpcomingOnly = qs('#dash-upcoming-only');
+    const btnSearch = qs('#dash-search');
     const btnClear = qs('#dash-clear');
 
     const sumTotal = qs('#dash-sum-total');
@@ -2363,20 +2364,62 @@
 
     [elYear, elMonth, elCidade, elTipo, elSetor, elDate].forEach(el=>{ if(el) el.addEventListener('input', render); });
       if(elUpcomingOnly) elUpcomingOnly.addEventListener('change', render);
-      if(btnClear){ btnClear.addEventListener('click', ()=>{
-        if(elYear) elYear.value='';
-        if(elMonth) elMonth.value='';
-        if(elCidade) elCidade.value='';
-        if(elTipo) elTipo.value='';
-        if(elSetor) elSetor.value='';
-        if(elDate) elDate.value='';
-        render();
-      }); }
-
-    readList('agenda2026', list => {
-      all = list || [];
-      try{ initFilters(all); }catch(err){ console.error(err); }
+    if(btnSearch) btnSearch.addEventListener('click', render);
+    if(btnClear){ btnClear.addEventListener('click', ()=>{
+      if(elYear) elYear.value='';
+      if(elMonth) elMonth.value='';
+      if(elCidade) elCidade.value='';
+      if(elTipo) elTipo.value='';
+      if(elSetor) elSetor.value='';
+      if(elDate) elDate.value='';
       render();
+    }); }
+
+    let filtersInitialized = false;
+    let agendaData = [];
+    let eventosData = [];
+    function recomputeAll(){
+      const merged = ([]).concat(agendaData||[], eventosData||[]);
+      all = merged;
+      try{ if(!filtersInitialized){ initFilters(all); filtersInitialized = true; } }catch(err){ console.error(err); }
+      render();
+    }
+    function cidadeDoEvento(ev){
+      try{
+        const c = congregacoesByIdEvents && congregacoesByIdEvents[ev.congregacaoId];
+        if(c && c.cidade) return c.cidade;
+        const nome = String(ev.congregacaoNome||'');
+        if(nome.includes(' - ')) return nome.split(' - ')[0];
+      }catch{}
+      return '';
+    }
+    function normalizeEventosForDashboard(list){
+      return (list||[]).map(ev=>{
+        return {
+          data: ev.data,
+          hora: horaDoEvento(ev),
+          tipo: ev.tipo,
+          cidade: cidadeDoEvento(ev),
+          congregacao: labelCong(ev)
+        };
+      });
+    }
+    // Carregar congregações para enriquecer eventos (cidade/hora)
+    readList('congregacoes', list => {
+      congregacoesByIdEvents = {};
+      (list||[]).forEach(c => { congregacoesByIdEvents[c.id] = c; });
+      recomputeAll();
+    });
+    // Carregar eventos (Atendimentos) e normalizar para o Dashboard
+    readList('eventos', list => {
+      eventosCache = list || [];
+      eventosData = normalizeEventosForDashboard(eventosCache);
+      recomputeAll();
+    });
+    // Carregar Agenda 2026
+    readList('agenda2026', list => {
+      agendaData = list || [];
+      recomputeAll();
     });
   }
 
