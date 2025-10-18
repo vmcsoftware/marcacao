@@ -1,0 +1,85 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agenda - Calendário Mensal</title>
+  <style>
+    :root {
+      --cal-border: #e5e7eb;
+      --cal-muted: #9ca3af;
+      --cal-today: #2563eb;
+      --cal-today-bg: #eff6ff;
+      --cal-event-bg: #f3f4f6;
+      --cal-event-pill: #111827;
+      --cal-event-pill-bg: #e5e7eb;
+    }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; margin: 0; }
+    header { border-bottom: 1px solid var(--cal-border); padding: 12px 16px; display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+    .nav { display: flex; gap: 12px; align-items: center; }
+    .nav a { color: #111827; text-decoration: none; font-weight: 500; }
+    .container { max-width: 1100px; margin: 16px auto; padding: 0 16px; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
+    .month-label { font-size: 18px; font-weight: 600; }
+    .btn { appearance: none; border: 1px solid var(--cal-border); background: white; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-weight: 500; }
+    .btn:hover { background: #f9fafb; }
+
+    .calendar { border: 1px solid var(--cal-border); border-radius: 12px; overflow: hidden; }
+    .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); font-size: 12px; color: var(--cal-muted); }
+    .cal-weekdays div { padding: 10px; text-align: center; font-weight: 600; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid var(--cal-border); }
+    .cal-cell { min-height: 120px; border-left: 1px solid var(--cal-border); border-top: 1px solid var(--cal-border); padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .cal-cell:nth-child(7n+1) { border-left: none; }
+    .cal-day { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #111827; }
+    .cal-day .muted { color: var(--cal-muted); }
+    .cal-day .today { color: var(--cal-today); background: var(--cal-today-bg); border-radius: 999px; padding: 2px 6px; font-weight: 700; }
+
+    .event { background: var(--cal-event-bg); border-radius: 8px; padding: 6px; font-size: 12px; line-height: 1.2; display: flex; flex-direction: column; gap: 3px; }
+    .event .title { font-weight: 600; }
+    .event .meta { color: #374151; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; background: var(--cal-event-pill-bg); color: var(--cal-event-pill); border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+
+    @media (max-width: 720px) {
+      .cal-cell { min-height: 100px; }
+      .event { font-size: 11px; }
+      .cal-weekdays div { padding: 8px 4px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav">
+      <a href="index.html">Início</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="agenda2026.html">Agenda 2026</a>
+      <strong>Agenda</strong>
+    </div>
+  </header>
+
+  <main id="agenda-month-root" class="container">
+    <div class="toolbar">
+      <div class="month-label" id="agenda-month-label">Carregando…</div>
+      <div style="display:flex; gap:8px;">
+        <button id="agenda-today-btn" class="btn">Hoje</button>
+      </div>
+    </div>
+
+    <section class="calendar">
+      <div class="cal-weekdays">
+        <div>Dom</div>
+        <div>Seg</div>
+        <div>Ter</div>
+        <div>Qua</div>
+        <div>Qui</div>
+        <div>Sex</div>
+        <div>Sáb</div>
+      </div>
+      <div id="agenda-month-grid" class="cal-grid"></div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
