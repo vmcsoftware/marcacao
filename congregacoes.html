@@ -108,6 +108,46 @@
         </fieldset>
 
         <fieldset class="full">
+          <legend>Cadastrar Ensaio</legend>
+          <div class="grid-2">
+            <div>
+              <label>
+                Tipo de Ensaio
+                <select name="ensaioTipo" id="ensaio-tipo">
+                  <option value="">Selecionar...</option>
+                  <option value="Regional">Regional</option>
+                  <option value="Local">Local</option>
+                </select>
+              </label>
+              <div class="mt-2">
+                <label>
+                  Horário do Ensaio
+                  <input type="time" name="ensaioHorario" id="ensaio-horario" />
+                </label>
+              </div>
+            </div>
+            <div>
+              <h4 class="meta">Meses com Ensaio</h4>
+              <div id="ensaio-meses" class="months-grid" aria-label="Seleção de meses">
+                <label><input type="checkbox" name="ensaioMes" value="1"> Jan</label>
+                <label><input type="checkbox" name="ensaioMes" value="2"> Fev</label>
+                <label><input type="checkbox" name="ensaioMes" value="3"> Mar</label>
+                <label><input type="checkbox" name="ensaioMes" value="4"> Abr</label>
+                <label><input type="checkbox" name="ensaioMes" value="5"> Mai</label>
+                <label><input type="checkbox" name="ensaioMes" value="6"> Jun</label>
+                <label><input type="checkbox" name="ensaioMes" value="7"> Jul</label>
+                <label><input type="checkbox" name="ensaioMes" value="8"> Ago</label>
+                <label><input type="checkbox" name="ensaioMes" value="9"> Set</label>
+                <label><input type="checkbox" name="ensaioMes" value="10"> Out</label>
+                <label><input type="checkbox" name="ensaioMes" value="11"> Nov</label>
+                <label><input type="checkbox" name="ensaioMes" value="12"> Dez</label>
+              </div>
+            </div>
+          </div>
+          <p class="text-muted" style="font-size:.9rem">Selecione o tipo de ensaio, marque os meses e informe o horário.</p>
+        </fieldset>
+
+        <fieldset class="full">
           <legend>Vincular Ministério da Igreja</legend>
           <div>
             <h4 class="meta">Ancião(ãs)</h4>
@@ -121,10 +161,10 @@
           </div>
         </fieldset>
 
-        <div class="form-actions">
-          <button type="submit" class="btn primary">Salvar Congregação</button>
-          <button type="reset" class="btn">Limpar</button>
-        </div>
+      <div class="form-actions">
+        <button type="submit" class="btn primary">Salvar Congregação</button>
+        <button type="reset" class="btn">Limpar</button>
+      </div>
       </form>
     </div>
     <div class="card shadow-sm p-3 mb-3">

@@ -788,6 +788,17 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       return { tipo, dia, horario };
     }).filter(c=> c.tipo && c.dia && c.horario);
   }
+  // Coleta dados de Ensaio (Regional/Local, Meses e Horário)
+  function collectEnsaio(){
+    const tipoEl = qs('#ensaio-tipo');
+    const horarioEl = qs('#ensaio-horario');
+    const mesesWrap = qs('#ensaio-meses');
+    const tipo = tipoEl ? (tipoEl.value||'') : '';
+    const horario = horarioEl ? (horarioEl.value||'') : '';
+    const meses = mesesWrap ? Array.from(mesesWrap.querySelectorAll('input[name="ensaioMes"]:checked')).map(inp=>parseInt(inp.value,10)).filter(n=>!isNaN(n)) : [];
+    if(!tipo) return null;
+    return { tipo, meses, horario };
+  }
   if(addCultoBtn && cultosWrapper){
     addCultoBtn.addEventListener('click', ()=>{
       cultosWrapper.appendChild(createCultoRow({ tipo:'Culto Oficial', dia:'Domingo', horario:'' }));
@@ -1314,12 +1325,14 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
 
       try{
         const editId = formCong.dataset.editId;
+        const ensaio = collectEnsaio();
         if(editId){
           const updated = await update('congregacoes', editId, {
             cidade: data.cidade,
             bairro: data.bairro,
             endereco: data.endereco,
             cultos,
+            ...(ensaio ? { ensaio } : {})
           });
           if(updated){
             toast('Congregação atualizada');
@@ -1332,6 +1345,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
             bairro: data.bairro,
             endereco: data.endereco,
             cultos,
+            ...(ensaio ? { ensaio } : {})
           });
           if(saved){
             toast('Congregação salva');
@@ -1402,6 +1416,18 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         const cultosRjm = ((c.cultos||[]).filter(x=>x.tipo==='RJM').length)
           ? `<div class="meta">RJM: ${(c.cultos||[]).filter(x=>x.tipo==='RJM').map(x=>`${x.dia} ${x.horario}`).join(', ')}</div>`
           : '';
+        // Resumo de Ensaio (tipo, meses e horário)
+        const ensaioLine = (function(){
+          const e = c.ensaio;
+          if(!e || !e.tipo) return '';
+          const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+          const mesesStr = Array.isArray(e.meses) && e.meses.length
+            ? e.meses.slice().sort((a,b)=>a-b).map(n=> mesesNomes[(n||1)-1] || n).join(', ')
+            : '-';
+          const horarioStr = e.horario ? ` às ${e.horario}` : '';
+          const icon = `<span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l4 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>`;
+          return `<div class="meta ensaio-line">${icon}Ensaio ${e.tipo}: ${mesesStr}${horarioStr}</div>`;
+        })();
         return `
           <div class="item">
             <div>
@@ -1413,6 +1439,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
               ${cjLine}
               ${cultosOficiais}
               ${cultosRjm}
+              ${ensaioLine}
             </div>
             <div>
               <button class="btn btn-sm btn-outline-secondary" data-action="edit-cong" data-id="${c.id}">Editar</button>
@@ -1470,6 +1497,22 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         cultosWrapper.innerHTML = '';
         (c.cultos||[]).forEach(ct=> cultosWrapper.appendChild(createCultoRow(ct)));
         renderCultosPreview();
+      }
+      // Pré-carregar Ensaio no formulário (tipo, meses e horário)
+      const ensTipoSel = qs('#ensaio-tipo');
+      const ensHorarioInp = qs('#ensaio-horario');
+      const ensMesesWrap = qs('#ensaio-meses');
+      const ens = c.ensaio || null;
+      if(ensTipoSel) ensTipoSel.value = (ens && ens.tipo) ? ens.tipo : '';
+      if(ensHorarioInp) ensHorarioInp.value = (ens && ens.horario) ? ens.horario : '';
+      if(ensMesesWrap){
+        const allChecks = Array.from(ensMesesWrap.querySelectorAll('input[name="ensaioMes"]'));
+        allChecks.forEach(ch => { ch.checked = false; });
+        const months = (ens && Array.isArray(ens.meses)) ? ens.meses : [];
+        months.forEach(m => {
+          const chk = ensMesesWrap.querySelector(`input[name="ensaioMes"][value="${m}"]`);
+          if(chk) chk.checked = true;
+        });
       }
     }
     if(listaCong){

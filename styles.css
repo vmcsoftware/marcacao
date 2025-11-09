@@ -814,3 +814,27 @@ legend {
   .btn { width: 100%; }
   #agendar-grid { grid-template-columns: 1fr; }
 }
+
+/* Destaque para linha de Ensaio na listagem de congregações */
+.ensaio-line {
+  color: #0ea5e9; /* sky-500 */
+  font-weight: 600;
+}
+.ensaio-line .icon {
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* Seleção de meses do Ensaio */
+.months-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(60px, 1fr));
+  gap: 8px 12px;
+}
+.months-grid label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .95rem;
+}

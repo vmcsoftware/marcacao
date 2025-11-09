@@ -1,0 +1,5 @@
+# Evitar subir segredos e arquivos de sistema
+config.js
+.DS_Store
+Thumbs.db
+node_modules/
