@@ -177,6 +177,7 @@ const btnEnsaiosExportXls = qs('#rel-ensaios-export-xls');
 const btnEnsaiosCopy = qs('#rel-ensaios-copy');
 const relBairroSel = qs('#rel-bairro');
 const relEnsaiosNextOnly = qs('#rel-ensaios-next-only');
+const btnRelBackfillCidade = qs('#rel-backfill-cidade');
   let relEventosFilteredCache = null;
   async function applyRelFiltersFetch(){
     try{
@@ -215,7 +216,7 @@ const relEnsaiosNextOnly = qs('#rel-ensaios-next-only');
     }
   }
   btnRelApply && btnRelApply.addEventListener('click', (e)=>{ e.preventDefault(); applyRelFiltersFetch(); });
-  btnRelClear && btnRelClear.addEventListener('click', ()=>{ relEventosFilteredCache = null; });
+btnRelClear && btnRelClear.addEventListener('click', ()=>{ relEventosFilteredCache = null; });
 btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYearSel.value=''; if(relMonthSel) relMonthSel.value=''; if(relCidadeSel) relCidadeSel.value=''; if(relBairroSel) relBairroSel.value=''; if(relEnsaiosSortSel) relEnsaiosSortSel.value='cidade'; if(relEnsaiosNextOnly) relEnsaiosNextOnly.checked=false; if(relTipoSel) relTipoSel.value=''; if(typeof renderRelatorios==='function') renderRelatorios(); });
   let eventosCache = [];
   let congregacoesCacheEvents = [];
@@ -3205,3 +3206,51 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       if(btnCal) btnCal.addEventListener('click', openEventosCalendar);
     }catch{}
   });
+// Admin: backfill de cidade nos eventos antigos
+function isAdminUser(){
+  try{
+    if(!window.firebase || !firebase.auth) return false;
+    const user = firebase.auth().currentUser;
+    const email = (user && user.email) ? user.email.toLowerCase() : '';
+    return email === 'viniciuscarvalhoccb@gmail.com';
+  }catch{ return false; }
+}
+async function backfillEventosCidade(){
+  try{
+    if(!db){ toast('Firebase não configurado', 'error'); return; }
+    if(!isAdminUser()){ toast('Acesso negado. Somente administradores.', 'error'); return; }
+    const confirmed = window.confirm('Confirmar backfill de cidade nos eventos antigos?');
+    if(!confirmed) return;
+    const congSnap = await db.ref('congregacoes').once('value');
+    const congregacoes = congSnap.val() || {};
+    const evSnap = await db.ref('eventos').once('value');
+    const eventos = evSnap.val() || {};
+    const ops = [];
+    Object.values(eventos).forEach(ev => {
+      const id = ev && ev.id;
+      const congId = ev && ev.congregacaoId;
+      const hasCidade = ev && !!ev.cidade;
+      const city = (congregacoes[congId] && congregacoes[congId].cidade) || '';
+      if(id && congId && !hasCidade && city){
+        ops.push(db.ref(`eventos/${id}/cidade`).set(city));
+      }
+    });
+    if(ops.length){
+      await Promise.all(ops);
+      toast(`Backfill concluído: ${ops.length} eventos atualizados.`);
+    } else {
+      toast('Nenhum evento precisava de backfill.');
+    }
+  }catch(err){
+    console.error(err);
+    toast('Falha no backfill de cidade', 'error');
+  }
+}
+// Exibir/ocultar botão admin e bind de ação (fora do escopo da IIFE)
+{
+  const _btnRelBackfillCidade = document.getElementById('rel-backfill-cidade');
+  if(_btnRelBackfillCidade){
+    _btnRelBackfillCidade.classList.toggle('hidden', !isAdminUser());
+    _btnRelBackfillCidade.addEventListener('click', (e)=>{ e.preventDefault(); backfillEventosCidade(); });
+  }
+}
