@@ -166,7 +166,7 @@ const relYearSel = qs('#rel-year');
 const relMonthSel = qs('#rel-month');
 const relCidadeSel = qs('#rel-cidade');
 const relTipoSel = qs('#rel-tipo');
-const btnRelApply = qs('#rel-apply');
+  const btnRelApply = qs('#rel-apply');
 const btnRelClear = qs('#rel-clear');
 const btnRelPrint = qs('#rel-print');
 const btnRelPdf = qs('#rel-print-pdf');
@@ -177,7 +177,42 @@ const btnEnsaiosExportXls = qs('#rel-ensaios-export-xls');
 const btnEnsaiosCopy = qs('#rel-ensaios-copy');
 const relBairroSel = qs('#rel-bairro');
 const relEnsaiosNextOnly = qs('#rel-ensaios-next-only');
-btnRelApply && btnRelApply.addEventListener('click', ()=>{ if(typeof renderRelatorios==='function') renderRelatorios(); });
+  let relEventosFilteredCache = null;
+  async function applyRelFiltersFetch(){
+    try{
+      if(!db){ if(typeof renderRelatorios==='function') renderRelatorios(); return; }
+      const y = relYearSel && relYearSel.value ? parseInt(relYearSel.value,10) : null;
+      const m = relMonthSel && relMonthSel.value ? parseInt(relMonthSel.value,10) : null;
+      const tipo = relTipoSel && relTipoSel.value ? relTipoSel.value : '';
+      let snap;
+      if(tipo){
+        snap = await db.ref('eventos').orderByChild('tipo').equalTo(tipo).once('value');
+      } else if(y && m){
+        const mm = `${m}`.padStart(2,'0');
+        const daysInMonth = new Date(y, m, 0).getDate();
+        const start = `${y}-${mm}-01`;
+        const end = `${y}-${mm}-${String(daysInMonth).padStart(2,'0')}`;
+        snap = await db.ref('eventos').orderByChild('data').startAt(start).endAt(end).once('value');
+      } else if(y){
+        const start = `${y}-01-01`;
+        const end = `${y}-12-31`;
+        snap = await db.ref('eventos').orderByChild('data').startAt(start).endAt(end).once('value');
+      } else {
+        snap = await db.ref('eventos').once('value');
+      }
+      const val = snap.val() || {};
+      relEventosFilteredCache = Object.values(val).sort((a,b)=>{
+        const ad = parseDateYmdLocal(a.data) || new Date(a.data);
+        const bd = parseDateYmdLocal(b.data) || new Date(b.data);
+        return ad - bd;
+      });
+    }catch(err){ console.error(err); toast('Falha ao buscar eventos no Firebase', 'error'); relEventosFilteredCache = null; }
+    finally{
+      try{ if(typeof renderRelatorios==='function') renderRelatorios(); }catch{}
+    }
+  }
+  btnRelApply && btnRelApply.addEventListener('click', (e)=>{ e.preventDefault(); applyRelFiltersFetch(); });
+  btnRelClear && btnRelClear.addEventListener('click', ()=>{ relEventosFilteredCache = null; });
 btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYearSel.value=''; if(relMonthSel) relMonthSel.value=''; if(relCidadeSel) relCidadeSel.value=''; if(relBairroSel) relBairroSel.value=''; if(relEnsaiosSortSel) relEnsaiosSortSel.value='cidade'; if(relEnsaiosNextOnly) relEnsaiosNextOnly.checked=false; if(relTipoSel) relTipoSel.value=''; if(typeof renderRelatorios==='function') renderRelatorios(); });
   let eventosCache = [];
   let congregacoesCacheEvents = [];
@@ -1139,7 +1174,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
     return parts[0]||'';
   }
   function getRelEventosFiltrados(){
-    const all = eventosCache || [];
+    const all = (relEventosFilteredCache || eventosCache || []).slice();
     const y = relYearSel && relYearSel.value ? parseInt(relYearSel.value,10) : null;
     const m = relMonthSel && relMonthSel.value ? parseInt(relMonthSel.value,10) : null;
     const cidade = relCidadeSel && relCidadeSel.value ? relCidadeSel.value : '';
