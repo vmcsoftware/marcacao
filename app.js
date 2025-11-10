@@ -149,6 +149,9 @@
   const listaEventos = qs('#lista-eventos');
   const eventoCong = qs('#evento-congregacao');
   const eventoAtendente = qs('#evento-atendente');
+  const eventoTipoSel = qs('select[name="tipo"]');
+  const eventoEnsaioTipoWrap = qs('#evento-ensaio-tipo-wrapper');
+  const eventoEnsaioTipoSel = qs('#evento-ensaio-tipo');
   const outraRegiaoBtn = qs('#atendente-outra-regiao-btn');
   const atendenteManualInput = qs('#evento-atendente-manual');
   const eventoCultosBody = qs('#evento-cultos-body');
@@ -244,6 +247,22 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       toggleAtendenteManual(hidden);
     });
   }
+  // Toggle de subtipo de Ensaio conforme o tipo selecionado
+  function toggleEnsaioSubtype(){
+    const isEnsaio = eventoTipoSel && (eventoTipoSel.value === 'Ensaio');
+    if(eventoEnsaioTipoWrap){
+      eventoEnsaioTipoWrap.classList.toggle('hidden', !isEnsaio);
+    }
+    if(eventoEnsaioTipoSel){
+      eventoEnsaioTipoSel.required = !!isEnsaio;
+      if(!isEnsaio){ eventoEnsaioTipoSel.value = ''; }
+    }
+  }
+  if(eventoTipoSel){
+    eventoTipoSel.addEventListener('change', toggleEnsaioSubtype);
+    // inicializa estado
+    toggleEnsaioSubtype();
+  }
   function renderEventoCultosPreview(congId){
     if(!eventoCultosBody) return;
     if(!congId){
@@ -275,6 +294,10 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       if(!data.tipo || !data.data || !data.congregacaoId || (!data.atendenteId && !manualNome)){
         toast('Preencha tipo, data, atendente e congregação', 'error');
         return;
+      }
+      if(data.tipo === 'Ensaio'){
+        const st = (data.ensaioTipo||'').trim();
+        if(!st){ toast('Selecione o tipo de Ensaio', 'error'); return; }
       }
       // Nova regra: permitir coletas por tipo em todas as congregações;
       // bloquear apenas duplicidade de CO na MESMA congregação e mês.
@@ -364,6 +387,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
             cidade: cidadeEvento,
             atendenteId: data.atendenteId,
             atendenteNome: atendenteNome,
+            ensaioTipo: data.ensaioTipo||'',
             observacoes: data.observacoes||''
           });
           if(res){ toast('Atendimento atualizado'); formEvento.reset(); }
@@ -376,6 +400,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
             cidade: cidadeEvento,
             atendenteId: data.atendenteId,
             atendenteNome: atendenteNome,
+            ensaioTipo: data.ensaioTipo||'',
             observacoes: data.observacoes||''
           });
           if(saved){ toast('Atendimento salvo'); formEvento.reset(); }
@@ -413,7 +438,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         return `
         <div class="item">
           <div>
-            <strong>${ev.tipo}</strong>
+            <strong>${ev.tipo}${ev.ensaioTipo?` - ${ev.ensaioTipo}`:''}</strong>
             <div class="meta">Data: ${formatDate(ev.data)}</div>
             <div class="meta">Congregação: <span class="congregacao-highlight">${congLabel}</span></div>
             <div class="meta">Atendido por: ${ev.atendenteNome||'-'}</div>
@@ -444,6 +469,9 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           const dataInp = formEvento.querySelector('input[name="data"]');
           const obsTxt = formEvento.querySelector('textarea[name="observacoes"]');
           if(tipoSel) tipoSel.value = ev.tipo||'';
+          // Ajusta subtipo de Ensaio ao editar
+          if(eventoTipoSel){ toggleEnsaioSubtype(); }
+          if(ev.tipo === 'Ensaio' && eventoEnsaioTipoSel){ eventoEnsaioTipoSel.value = ev.ensaioTipo||''; }
           if(dataInp) dataInp.value = ev.data||'';
           if(eventoCong) { eventoCong.value = ev.congregacaoId||''; renderEventoCultosPreview(ev.congregacaoId||''); }
           if(eventoAtendente) eventoAtendente.value = ev.atendenteId||'';
@@ -502,7 +530,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
             <td>${hora}</td>
             <td>${localLabel}</td>
             <td>${ev.atendenteNome||'-'}${ev.atendenteOutraRegiao ? ' <span class=\"flag-outra-regiao\" title=\"Irmão de outra região\"><svg viewBox=\"0 0 24 24\"><path d=\"M12 2c-4.4 0-8 3.1-8 7 0 5 8 13 8 13s8-8 8-13c0-3.9-3.6-7-8-7zm0 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4z\" fill=\"currentColor\"/></svg></span>' : ''}</td>
-            <td>${ev.tipo}</td>
+            <td>${ev.tipo}${ev.ensaioTipo?` - ${ev.ensaioTipo}`:''}</td>
           </tr>`;
         }).join('');
 
@@ -2124,7 +2152,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       <td>${hora}</td>
       <td><span class="congregacao-highlight">${localLabel}</span></td>
       <td>${ev.atendenteNome||'-'}${ev.atendenteOutraRegiao ? ' <span class=\"flag-outra-regiao\" title=\"Irmão de outra região\"><svg viewBox=\"0 0 24 24\"><path d=\"M12 2c-4.4 0-8 3.1-8 7 0 5 8 13 8 13s8-8 8-13c0-3.9-3.6-7-8-7zm0 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4z\" fill=\"currentColor\"/></svg></span>' : ''}</td>
-      <td>${ev.tipo}</td>
+      <td>${ev.tipo}${ev.ensaioTipo?` - ${ev.ensaioTipo}`:''}</td>
     </tr>`;
     }).join('');
   };
