@@ -774,6 +774,9 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
   const listaCong = qs('#lista-congregacoes');
   const congAnciaoSel = qs('#cong-anciao');
   const congDiaconoSel = qs('#cong-diacono');
+  const ensEncLocalSel = qs('#ensaio-enc-local');
+  const ensEncRegRespSel = qs('#ensaio-enc-reg-resp');
+  const ensExaminadoraSel = qs('#ensaio-examinadora');
   const badgeCO = qs('#badge-cooperador-oficial');
   const badgeCJ = qs('#badge-cooperador-jovens');
   const listaMin = qs('#lista-ministerio');
@@ -895,19 +898,23 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
   function renderEnsaioPreview(){
     const body = qs('#ensaio-preview-body');
     if(!body) return;
-    const tipoEl = qs('#ensaio-tipo');
+    const tiposWrap = qs('#ensaio-tipos');
     const horarioEl = qs('#ensaio-horario');
     const diaEl = qs('#ensaio-dia');
     const semanaEl = qs('#ensaio-semana');
     const anoEl = qs('#ensaio-ano');
     const mesesWrap = qs('#ensaio-meses');
-    const tipo = tipoEl ? (tipoEl.value||'') : '';
+    // Vínculos (somente para exibir se quisermos no futuro)
+    // const encLocalId = ensEncLocalSel ? (ensEncLocalSel.value||'') : '';
+    // const encRegRespId = ensEncRegRespSel ? (ensEncRegRespSel.value||'') : '';
+    // const examinadoraId = ensExaminadoraSel ? (ensExaminadoraSel.value||'') : '';
+    const tipos = tiposWrap ? Array.from(tiposWrap.querySelectorAll('input[name="ensaioTipo"]:checked')).map(inp=>inp.value).filter(Boolean) : [];
     const horario = horarioEl ? (horarioEl.value||'') : '';
     const diaSemana = diaEl ? (diaEl.value||'') : '';
     const semana = semanaEl ? parseInt(semanaEl.value||'',10) : NaN;
     const ano = anoEl ? parseInt(anoEl.value||'',10) : NaN;
     const meses = mesesWrap ? Array.from(mesesWrap.querySelectorAll('input[name="ensaioMes"]:checked')).map(inp=>parseInt(inp.value,10)).filter(n=>!isNaN(n)) : [];
-    if(!tipo || !horario || !diaSemana || !semana || !ano || !meses.length){
+    if(!tipos.length || !horario || !diaSemana || !semana || !ano || !meses.length){
       body.innerHTML = '<tr><td colspan="2" class="text-muted">Selecione dia, semana, ano e meses para calcular</td></tr>';
       return;
     }
@@ -915,25 +922,29 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
     const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     body.innerHTML = meses.map(m => {
       const date = nthWeekdayOfMonth(ano, m-1, wd, semana);
-      const ymd = date ? formatYmd(date) : '—';
-      return `<tr><td>${mesesNomes[(m||1)-1]||m}</td><td>${ymd}</td></tr>`;
+      const ymd = date ? formatYmd(date) : '';
+      const br = ymd ? formatDate(ymd) : '—';
+      return `<tr><td>${mesesNomes[(m||1)-1]||m}</td><td>${br}</td></tr>`;
     }).join('');
   }
   // Coleta dados de Ensaio (Regional/Local, Meses, Horário, Dia/Semana/Ano e datas calculadas)
   function collectEnsaio(){
-    const tipoEl = qs('#ensaio-tipo');
+    const tiposWrap = qs('#ensaio-tipos');
     const horarioEl = qs('#ensaio-horario');
     const diaEl = qs('#ensaio-dia');
     const semanaEl = qs('#ensaio-semana');
     const anoEl = qs('#ensaio-ano');
     const mesesWrap = qs('#ensaio-meses');
-    const tipo = tipoEl ? (tipoEl.value||'') : '';
+    const encLocalId = ensEncLocalSel ? (ensEncLocalSel.value||'') : '';
+    const encRegResponsavelId = ensEncRegRespSel ? (ensEncRegRespSel.value||'') : '';
+    const examinadoraId = ensExaminadoraSel ? (ensExaminadoraSel.value||'') : '';
+    const tipos = tiposWrap ? Array.from(tiposWrap.querySelectorAll('input[name="ensaioTipo"]:checked')).map(inp=>inp.value).filter(Boolean) : [];
     const horario = horarioEl ? (horarioEl.value||'') : '';
     const diaSemana = diaEl ? (diaEl.value||'') : '';
     const semana = semanaEl ? parseInt(semanaEl.value||'',10) : NaN;
     const ano = anoEl ? parseInt(anoEl.value||'',10) : NaN;
     const meses = mesesWrap ? Array.from(mesesWrap.querySelectorAll('input[name="ensaioMes"]:checked')).map(inp=>parseInt(inp.value,10)).filter(n=>!isNaN(n)) : [];
-    if(!tipo) return null;
+    if(!tipos.length) return null;
     const datas = [];
     if(diaSemana && semana && ano && meses.length){
       const wd = diasIndice[diaSemana];
@@ -942,7 +953,8 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         if(dt){ datas.push({ mes:m, data: formatYmd(dt) }); }
       });
     }
-    return { tipo, meses, horario, diaSemana, semana: (isNaN(semana)?undefined:semana), ano: (isNaN(ano)?undefined:ano), datas };
+    const tipo = tipos[0] || '';
+    return { tipo, tipos, meses, horario, diaSemana, semana: (isNaN(semana)?undefined:semana), ano: (isNaN(ano)?undefined:ano), datas, encLocalId, encRegResponsavelId, examinadoraId };
   }
   if(addCultoBtn && cultosWrapper){
     addCultoBtn.addEventListener('click', ()=>{
@@ -951,12 +963,14 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
     });
   }
   // Eventos para atualizar preview do Ensaio
-  ['ensaio-tipo','ensaio-horario','ensaio-dia','ensaio-semana','ensaio-ano'].forEach(id => {
+  ['ensaio-horario','ensaio-dia','ensaio-semana','ensaio-ano'].forEach(id => {
     const el = qs(`#${id}`);
     if(el){ el.addEventListener('change', renderEnsaioPreview); el.addEventListener('input', renderEnsaioPreview); }
   });
   const ensMesesWrap = qs('#ensaio-meses');
   if(ensMesesWrap){ ensMesesWrap.addEventListener('change', renderEnsaioPreview); }
+  const ensTiposWrap = qs('#ensaio-tipos');
+  if(ensTiposWrap){ ensTiposWrap.addEventListener('change', renderEnsaioPreview); }
 
   // UI repeatable de vínculos de Ministério (Ancião/Diácono)
   const anciaosWrapper = qs('#anciaos-wrapper');
@@ -1116,6 +1130,11 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
 
     populateMinistrySelect(congAnciaoSel, list, m=>m.funcao==='Ancião');
     populateMinistrySelect(congDiaconoSel, list, m=>m.funcao==='Diácono');
+
+    // Popula selects de vínculos do Ensaio
+    populateMinistrySelect(ensEncLocalSel, list, m=>m.funcao==='Encarregado Local');
+    populateMinistrySelect(ensEncRegRespSel, list, m=>m.funcao==='Encarregado Regional');
+    populateMinistrySelect(ensExaminadoraSel, list, m=>m.funcao==='Examinadora');
 
     // Listar Ministério
     if(listaMin){
@@ -1396,7 +1415,8 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       const items = filtered.length
         ? filtered.map(d=> `${mesesNomes[(d.mes||1)-1]||d.mes}: ${fmtDate(d.data)} (${dowName(d.data)})${horarioStr}`).join(', ')
         : '—';
-      const tipo = e.tipo ? ` (${e.tipo})` : '';
+      const tiposStr = Array.isArray(e.tipos) && e.tipos.length ? e.tipos.join(' / ') : (e.tipo||'');
+      const tipo = tiposStr ? ` (${tiposStr})` : '';
       return `<li><strong>${labelFor(c)}</strong>${tipo}: ${items}</li>`;
     });
     relCongEnsaiosEl.innerHTML = lines.join('');
@@ -1420,7 +1440,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         filtered.forEach(d => {
           rows.push({
             Congregacao: labelFor(c),
-            Tipo: e.tipo||'',
+            Tipo: (Array.isArray(e.tipos) && e.tipos.length ? e.tipos.join(' / ') : (e.tipo||'')),
             Ano: e.ano||'',
             Mes: d.mes||'',
             Data: fmtDate(d.data),
@@ -1746,17 +1766,33 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         const cultosRjm = ((c.cultos||[]).filter(x=>x.tipo==='RJM').length)
           ? `<div class="meta">RJM: ${(c.cultos||[]).filter(x=>x.tipo==='RJM').map(x=>`${x.dia} ${x.horario}`).join(', ')}</div>`
           : '';
-        // Resumo de Ensaio (tipo, meses e horário)
+        // Resumo de Ensaio (tipos, meses e horário)
         const ensaioLine = (function(){
           const e = c.ensaio;
-          if(!e || !e.tipo) return '';
+          const hasTipos = Array.isArray(e && e.tipos) ? e.tipos.length>0 : !!(e && e.tipo);
+          if(!hasTipos) return '';
           const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
           const mesesStr = Array.isArray(e.meses) && e.meses.length
             ? e.meses.slice().sort((a,b)=>a-b).map(n=> mesesNomes[(n||1)-1] || n).join(', ')
             : '-';
           const horarioStr = e.horario ? ` às ${e.horario}` : '';
+          const tiposStr = Array.isArray(e.tipos) && e.tipos.length ? e.tipos.join(' / ') : (e && e.tipo ? e.tipo : '');
+          // Vínculos
+          const idToName = (id)=> {
+            if(!id) return '';
+            const m = (ministryCache||[]).find(x=>x.id===id);
+            return m ? m.nome : '';
+          };
+          const vinculos = [];
+          const encLocalNome = idToName(e.encLocalId);
+          const encRegRespNome = idToName(e.encRegResponsavelId);
+          const examinadoraNome = idToName(e.examinadoraId);
+          if(encLocalNome) vinculos.push(`EL: ${encLocalNome}`);
+          if(encRegRespNome) vinculos.push(`ERR: ${encRegRespNome}`);
+          if(examinadoraNome) vinculos.push(`Examinadora: ${examinadoraNome}`);
+          const vinculosStr = vinculos.length ? ` • ${vinculos.join(' | ')}` : '';
           const icon = `<span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l4 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>`;
-          return `<div class="meta ensaio-line">${icon}Ensaio ${e.tipo}: ${mesesStr}${horarioStr}</div>`;
+          return `<div class="meta ensaio-line">${icon}Ensaio ${tiposStr}: ${mesesStr}${horarioStr}${vinculosStr}</div>`;
         })();
         // Datas calculadas de Ensaio por mês (se disponíveis)
         const ensaioDatasLine = (function(){
@@ -1840,15 +1876,23 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         (c.cultos||[]).forEach(ct=> cultosWrapper.appendChild(createCultoRow(ct)));
         renderCultosPreview();
       }
-      // Pré-carregar Ensaio no formulário (tipo, meses e horário)
-      const ensTipoSel = qs('#ensaio-tipo');
+      // Pré-carregar Ensaio no formulário (tipos, meses e horário)
+      const ensTiposWrap = qs('#ensaio-tipos');
       const ensHorarioInp = qs('#ensaio-horario');
       const ensDiaSel = qs('#ensaio-dia');
       const ensSemanaSel = qs('#ensaio-semana');
       const ensAnoInp = qs('#ensaio-ano');
       const ensMesesWrap = qs('#ensaio-meses');
       const ens = c.ensaio || null;
-      if(ensTipoSel) ensTipoSel.value = (ens && ens.tipo) ? ens.tipo : '';
+      if(ensTiposWrap){
+        const checks = Array.from(ensTiposWrap.querySelectorAll('input[name="ensaioTipo"]'));
+        checks.forEach(ch => { ch.checked = false; });
+        const tipos = Array.isArray(ens && ens.tipos) ? (ens.tipos||[]) : ((ens && ens.tipo) ? [ens.tipo] : []);
+        tipos.forEach(t => {
+          const chk = ensTiposWrap.querySelector(`input[name="ensaioTipo"][value="${t}"]`);
+          if(chk) chk.checked = true;
+        });
+      }
       if(ensHorarioInp) ensHorarioInp.value = (ens && ens.horario) ? ens.horario : '';
       if(ensDiaSel) ensDiaSel.value = (ens && ens.diaSemana) ? ens.diaSemana : '';
       if(ensSemanaSel) ensSemanaSel.value = (ens && ens.semana) ? String(ens.semana) : '';
@@ -1862,6 +1906,10 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           if(chk) chk.checked = true;
         });
       }
+      // Pré-carregar vínculos do Ensaio
+      if(ensEncLocalSel) ensEncLocalSel.value = (ens && ens.encLocalId) ? ens.encLocalId : '';
+      if(ensEncRegRespSel) ensEncRegRespSel.value = (ens && ens.encRegResponsavelId) ? ens.encRegResponsavelId : '';
+      if(ensExaminadoraSel) ensExaminadoraSel.value = (ens && ens.examinadoraId) ? ens.examinadoraId : '';
       renderEnsaioPreview();
     }
     if(listaCong){

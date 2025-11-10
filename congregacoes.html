@@ -107,33 +107,52 @@
           </div>
         </fieldset>
 
-        <fieldset class="full">
-          <legend>Cadastrar Ensaio</legend>
-          <div class="grid-2">
-            <div>
-              <label>
-                Tipo de Ensaio
-                <select name="ensaioTipo" id="ensaio-tipo">
-                  <option value="">Selecionar...</option>
-                  <option value="Regional">Regional</option>
-                  <option value="Local">Local</option>
-                  <option value="Ensaio Geral por Família">Ensaio Geral por Família</option>
-                  <option value="Ensaio Geral por Categoria">Ensaio Geral por Categoria</option>
-                  <option value="Ensaio DARPE">Ensaio DARPE</option>
-                  <option value="Ensaio GEM">Ensaio GEM</option>
-                </select>
-              </label>
-              <div class="mt-2">
-                <label>
-                  Horário do Ensaio
-                  <input type="time" name="ensaioHorario" id="ensaio-horario" />
-                </label>
-              </div>
-              <div class="mt-2 grid-3">
-                <label>
-                  Dia da Semana
-                  <select id="ensaio-dia" name="ensaioDia">
-                    <option value="">Selecionar...</option>
+          <fieldset class="full">
+            <legend>Cadastrar Ensaio</legend>
+            <div class="grid-2">
+              <div>
+                <div>
+                  <div class="form-label">Tipo de Ensaio (podem ser vários)</div>
+                  <div id="ensaio-tipos" class="grid-2" aria-label="Seleção de tipos de ensaio">
+                    <label><input type="checkbox" name="ensaioTipo" value="Regional"> Regional</label>
+                    <label><input type="checkbox" name="ensaioTipo" value="Local"> Local</label>
+                    <label><input type="checkbox" name="ensaioTipo" value="Ensaio Geral por Família"> Ensaio Geral por Família</label>
+                    <label><input type="checkbox" name="ensaioTipo" value="Ensaio Geral por Categoria"> Ensaio Geral por Categoria</label>
+                    <label><input type="checkbox" name="ensaioTipo" value="Ensaio DARPE"> Ensaio DARPE</label>
+                    <label><input type="checkbox" name="ensaioTipo" value="Ensaio GEM"> Ensaio GEM</label>
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <label>
+                    Horário do Ensaio
+                    <input type="time" name="ensaioHorario" id="ensaio-horario" />
+                  </label>
+                </div>
+                <div class="mt-2 grid-3">
+                  <label>
+                    Encarregado Local (Ensaio)
+                    <select id="ensaio-enc-local" name="ensaioEncLocal">
+                      <option value="">Selecionar...</option>
+                    </select>
+                  </label>
+                  <label>
+                    Encarregado Regional Responsável
+                    <select id="ensaio-enc-reg-resp" name="ensaioEncRegResp">
+                      <option value="">Selecionar...</option>
+                    </select>
+                  </label>
+                  <label>
+                    Examinadora
+                    <select id="ensaio-examinadora" name="ensaioExaminadora">
+                      <option value="">Selecionar...</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="mt-2 grid-3">
+                  <label>
+                    Dia da Semana
+                    <select id="ensaio-dia" name="ensaioDia">
+                      <option value="">Selecionar...</option>
                     <option>Domingo</option>
                     <option>Segunda</option>
                     <option>Terça</option>
