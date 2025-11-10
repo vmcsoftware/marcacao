@@ -50,12 +50,23 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
-  <header>
-    <div class="nav">
-      <a href="index.html">Início</a>
-      <a href="dashboard.html">Dashboard</a>
-      <a href="agenda2026.html">Agenda 2026</a>
-      <strong>Agenda</strong>
+  <header class="app-header bg-white shadow-sm">
+    <div class="container header-content">
+      <div class="brand">
+        <div>
+          <h1>Administração CCB Ituiutaba</h1>
+          <p>Agenda Mensal</p>
+        </div>
+      </div>
+      <nav class="tabs nav nav-tabs" role="tablist">
+        <a class="nav-link tab" href="index.html" id="tab-btn-eventos">Atendimento</a>
+        <a class="nav-link tab" href="ministerio.html" id="tab-btn-ministerio">Ministério</a>
+        <a class="nav-link tab" href="congregacoes.html" id="tab-btn-congregacoes">Congregações</a>
+        <a class="nav-link tab" href="relatorios.html" id="tab-btn-relatorios">Relatórios</a>
+        <a class="nav-link tab" href="dashboard.html" id="tab-btn-dashboard">Dashboard</a>
+        <a class="nav-link tab active" href="agenda.html" id="tab-btn-agenda">Agenda</a>
+        <a class="nav-link tab" href="agenda2026.html" id="tab-btn-agenda2026">Agenda 2026</a>
+      </nav>
     </div>
   </header>
 
