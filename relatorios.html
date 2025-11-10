@@ -66,34 +66,53 @@
   <main class="content container my-3">
     <div class="card">
       <h2>Relatórios</h2>
+      <div class="filter-bar sticky-top p-3 mb-2 bg-white border rounded">
+        <div class="row g-2 align-items-end">
+          <div class="col-6 col-md-auto">
+            <label for="rel-year" class="form-label">Ano</label>
+            <select id="rel-year" class="form-select form-select-sm"></select>
+          </div>
+          <div class="col-6 col-md-auto">
+            <label for="rel-month" class="form-label">Mês</label>
+            <select id="rel-month" class="form-select form-select-sm"></select>
+          </div>
+          <div class="col-12 col-md-auto">
+            <label for="rel-cidade" class="form-label">Cidade</label>
+            <select id="rel-cidade" class="form-select form-select-sm"></select>
+          </div>
+          <div class="col-12 col-md-auto">
+            <label for="rel-tipo" class="form-label">Tipo</label>
+            <select id="rel-tipo" class="form-select form-select-sm"></select>
+          </div>
+          <div class="col-12 col-md-auto ms-md-auto">
+            <button id="rel-apply" class="btn btn-primary btn-sm">Aplicar</button>
+            <button id="rel-clear" class="btn btn-outline-secondary btn-sm">Limpar</button>
+          </div>
+        </div>
+        <div class="section-help mt-1">Dica: ajuste os filtros para refinar os relatórios e use “Gerar Calendário” para imprimir o mês selecionado.</div>
+      </div>
       <div class="reports-grid">
         <div class="report">
           <h3>Resumo de Atendimentos</h3>
+          <div class="mb-2">
+            <button id="rel-eventos-calendar" class="btn btn-outline-primary btn-sm">Gerar Calendário</button>
+          </div>
+          <div class="section-help">Eventos listados conforme os filtros acima (Ano, Mês, Cidade, Tipo).</div>
           <ul id="relatorio-eventos"></ul>
         </div>
         <div class="report">
           <h3>Ministério por Função</h3>
+          <div class="section-help">Totais por função (Ancião, Diácono, Cooperadores), com base nos dados atuais.</div>
           <ul id="relatorio-ministerio"></ul>
         </div>
         <div class="report">
           <h3>Total de Congregações</h3>
+          <div class="section-help">Contagem geral de congregações cadastradas (por cidade e bairro).</div>
           <p id="relatorio-congregacoes"></p>
         </div>
         <div class="report">
           <h3>Ensaios por Congregação</h3>
           <div class="row g-2 align-items-end mb-2">
-            <div class="col-auto">
-              <label for="rel-year" class="form-label">Ano</label>
-              <select id="rel-year" class="form-select form-select-sm"></select>
-            </div>
-            <div class="col-auto">
-              <label for="rel-month" class="form-label">Mês</label>
-              <select id="rel-month" class="form-select form-select-sm"></select>
-            </div>
-            <div class="col-auto">
-              <label for="rel-cidade" class="form-label">Cidade</label>
-              <select id="rel-cidade" class="form-select form-select-sm"></select>
-            </div>
             <div class="col-auto">
               <label for="rel-bairro" class="form-label">Bairro</label>
               <select id="rel-bairro" class="form-select form-select-sm"></select>
@@ -112,13 +131,12 @@
               </div>
             </div>
             <div class="col-auto">
-              <button id="rel-apply" class="btn btn-primary btn-sm">Aplicar</button>
-              <button id="rel-clear" class="btn btn-outline-secondary btn-sm">Limpar</button>
               <button id="rel-ensaios-export-csv" class="btn btn-outline-success btn-sm">Exportar CSV</button>
               <button id="rel-ensaios-export-xls" class="btn btn-outline-success btn-sm">Exportar XLS</button>
               <button id="rel-ensaios-copy" class="btn btn-outline-secondary btn-sm">Copiar</button>
             </div>
           </div>
+          <div class="section-help">Use “Próximo apenas” para destacar a próxima data por congregação. Os filtros globais (Ano, Mês, Cidade) acima também se aplicam.</div>
           <ul id="relatorio-cong-ensaios"></ul>
         </div>
       </div>

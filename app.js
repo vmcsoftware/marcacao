@@ -692,7 +692,10 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
   function formatDate(str){
     try{
       const d = parseDateYmdLocal(str) || new Date(str);
-      return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+      const day = String(d.getDate()).padStart(2,'0');
+      const month = String(d.getMonth()+1).padStart(2,'0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
     }catch{ return str; }
   }
 
@@ -1261,7 +1264,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
     }
     const labelFor = (c) => c.nomeFormatado || (c.cidade && c.bairro ? `${c.cidade} - ${c.bairro}` : (c.nome||c.id));
     const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    const fmtDate = (ymd)=> (ymd && /^\d{4}-\d{2}-\d{2}$/.test(ymd)) ? (()=>{ const [y,m,d]=ymd.split('-'); return `${d}/${m}/${y}`; })() : (ymd||'-');
+    const fmtDate = (ymd)=> (ymd && /^\d{4}-\d{2}-\d{2}$/.test(ymd)) ? formatDate(ymd) : (ymd||'-');
     const capitalizeFirst = (s)=> !s ? '' : (s.charAt(0).toUpperCase() + s.slice(1));
     const dowName = (ymd)=>{
       const d = parseDateYmdLocal(ymd);
@@ -1688,7 +1691,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           const e = c.ensaio;
           if(!e || !Array.isArray(e.datas) || !e.datas.length) return '';
           const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-          const fmt = (ymd)=> (ymd && /^\d{4}-\d{2}-\d{2}$/.test(ymd)) ? (()=>{ const [y,m,d]=ymd.split('-'); return `${d}/${m}/${y}`; })() : (ymd||'-');
+          const fmt = (ymd)=> (ymd && /^\d{4}-\d{2}-\d{2}$/.test(ymd)) ? formatDate(ymd) : (ymd||'-');
           const items = e.datas.slice().sort((a,b)=> (a.mes||0)-(b.mes||0)).map(d=> `${mesesNomes[(d.mes||1)-1]||d.mes}: ${fmt(d.data)}`).join(', ');
           return `<div class="meta ensaio-line">Datas de Ensaio: ${items}</div>`;
         })();
@@ -3046,3 +3049,114 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       return window._renderTabelaReforcosInner();
     }
   }
+
+  // Relatórios: Calendário de eventos
+  function openEventosCalendar(){
+    try{
+      const list = getRelEventosFiltrados();
+      if(!list || !list.length){
+        toast('Nenhum evento encontrado para gerar o calendário');
+        return;
+      }
+      const y = (relYearSel && relYearSel.value) ? parseInt(relYearSel.value,10) : (parseDateYmdLocal(list[0].data)||new Date()).getFullYear();
+      const m = (relMonthSel && relMonthSel.value) ? parseInt(relMonthSel.value,10) : ((parseDateYmdLocal(list[0].data)||new Date()).getMonth()+1);
+      // filtrar lista para o mês/ano escolhido
+      const monthList = list.filter(ev=>{
+        const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+        return d && d.getFullYear()===y && (d.getMonth()+1)===m;
+      });
+      if(!monthList.length){
+        toast('Nenhum evento no mês selecionado');
+        return;
+      }
+      // agrupar por dia
+      const byDay = {};
+      monthList.forEach(ev=>{
+        const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+        const day = d.getDate();
+        (byDay[day] = byDay[day] || []).push(ev);
+      });
+      Object.keys(byDay).forEach(k=>{
+        byDay[k].sort((a,b)=>{
+          const ha = horaDoEvento(a)||''; const hb = horaDoEvento(b)||'';
+          return ha.localeCompare(hb);
+        });
+      });
+
+      // construir calendário mensal
+      const first = new Date(y, m-1, 1);
+      const title = monthLabel(first);
+      const startWeekday = first.getDay();
+      const daysInMonth = new Date(y, m, 0).getDate();
+      const cells = [];
+      for(let i=0;i<startWeekday;i++){ cells.push({ empty:true }); }
+      for(let d=1; d<=daysInMonth; d++){
+        cells.push({ day:d, events: byDay[d]||[] });
+      }
+      while(cells.length % 7 !== 0){ cells.push({ empty:true }); }
+
+      const html = `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calendário de Eventos - ${title}</title>
+  <style>
+    body{ font-family: Arial, Helvetica, sans-serif; margin:20px; }
+    .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+    .title{ font-size:20px; font-weight:bold; }
+    .print-btn{ padding:6px 10px; border:1px solid #0d6efd; background:#e7f1ff; color:#0d6efd; border-radius:4px; cursor:pointer; }
+    .grid{ display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; }
+    .cell{ border:1px solid #ddd; min-height:120px; padding:6px; border-radius:6px; }
+    .cell.empty{ background:#fafafa; }
+    .day{ font-weight:bold; margin-bottom:4px; color:#333; }
+    .event{ margin:4px 0; padding:4px; border-left:3px solid #0d6efd; background:#f5f9ff; border-radius:4px; }
+    .event .meta{ font-size:12px; color:#555; }
+    .event .title{ font-size:13px; color:#111; }
+    .legend{ margin-top:12px; font-size:12px; color:#666; }
+    @media print{ .print-btn{ display:none; } .cell{ break-inside: avoid; } }
+  </style>
+  <script>
+    function imprimir(){ window.print(); }
+  </script>
+</head>
+<body>
+  <div class="topbar">
+    <div class="title">Calendário de Eventos — ${title}</div>
+    <button class="print-btn" onclick="imprimir()">Imprimir</button>
+  </div>
+  <div class="grid">
+    ${cells.map(c=>{
+      if(c.empty) return '<div class="cell empty"></div>';
+      const itens = (c.events||[]).map(ev=>{
+        const hora = (ev.hora || horaDoEvento(ev) || '');
+        const tt = ev.tipo || '';
+        const cong = labelCong(ev) || (ev.congregacaoNome || '');
+        return `<div class="event"><div class="meta">${tt}${hora? ' • ' + hora : ''}</div><div class="title">${cong}</div></div>`;
+      }).join('');
+      return `<div class="cell"><div class="day">${c.day}</div>${itens||''}</div>`;
+    }).join('')}
+  </div>
+  <div class="legend">Eventos mostrados conforme filtros de Relatórios.</div>
+</body>
+</html>`;
+
+      const w = window.open('', '_blank');
+      if(!w){ toast('Bloqueado pelo navegador: permita pop-ups para visualizar o calendário'); return; }
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    }catch(err){
+      console.error(err);
+      const msg = (err && (err.message||err.code)) || 'Falha ao gerar calendário';
+      toast(msg, 'error');
+    }
+  }
+
+  // Bind do botão de calendário em Relatórios
+  document.addEventListener('DOMContentLoaded', function(){
+    try{
+      const btnCal = qs('#rel-eventos-calendar');
+      if(btnCal) btnCal.addEventListener('click', openEventosCalendar);
+    }catch{}
+  });
