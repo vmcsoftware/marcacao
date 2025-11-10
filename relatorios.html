@@ -79,6 +79,48 @@
           <h3>Total de Congregações</h3>
           <p id="relatorio-congregacoes"></p>
         </div>
+        <div class="report">
+          <h3>Ensaios por Congregação</h3>
+          <div class="row g-2 align-items-end mb-2">
+            <div class="col-auto">
+              <label for="rel-year" class="form-label">Ano</label>
+              <select id="rel-year" class="form-select form-select-sm"></select>
+            </div>
+            <div class="col-auto">
+              <label for="rel-month" class="form-label">Mês</label>
+              <select id="rel-month" class="form-select form-select-sm"></select>
+            </div>
+            <div class="col-auto">
+              <label for="rel-cidade" class="form-label">Cidade</label>
+              <select id="rel-cidade" class="form-select form-select-sm"></select>
+            </div>
+            <div class="col-auto">
+              <label for="rel-bairro" class="form-label">Bairro</label>
+              <select id="rel-bairro" class="form-select form-select-sm"></select>
+            </div>
+            <div class="col-auto">
+              <label for="rel-ensaios-sort" class="form-label">Ordenar</label>
+              <select id="rel-ensaios-sort" class="form-select form-select-sm">
+                <option value="cidade">Cidade</option>
+                <option value="proximo">Próxima Data</option>
+              </select>
+            </div>
+            <div class="col-auto">
+              <div class="form-check mt-4">
+                <input class="form-check-input" type="checkbox" id="rel-ensaios-next-only" />
+                <label class="form-check-label" for="rel-ensaios-next-only">Próximo apenas</label>
+              </div>
+            </div>
+            <div class="col-auto">
+              <button id="rel-apply" class="btn btn-primary btn-sm">Aplicar</button>
+              <button id="rel-clear" class="btn btn-outline-secondary btn-sm">Limpar</button>
+              <button id="rel-ensaios-export-csv" class="btn btn-outline-success btn-sm">Exportar CSV</button>
+              <button id="rel-ensaios-export-xls" class="btn btn-outline-success btn-sm">Exportar XLS</button>
+              <button id="rel-ensaios-copy" class="btn btn-outline-secondary btn-sm">Copiar</button>
+            </div>
+          </div>
+          <ul id="relatorio-cong-ensaios"></ul>
+        </div>
       </div>
     </div>
   </main>

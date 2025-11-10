@@ -160,6 +160,7 @@
   const relEventosEl = qs('#relatorio-eventos');
 const relMinisterioEl = qs('#relatorio-ministerio');
 const relCongregacoesEl = qs('#relatorio-congregacoes');
+const relCongEnsaiosEl = qs('#relatorio-cong-ensaios');
 // Filtros e botões de Relatórios
 const relYearSel = qs('#rel-year');
 const relMonthSel = qs('#rel-month');
@@ -170,8 +171,14 @@ const btnRelClear = qs('#rel-clear');
 const btnRelPrint = qs('#rel-print');
 const btnRelPdf = qs('#rel-print-pdf');
 const btnRelXls = qs('#rel-export-xls');
+const relEnsaiosSortSel = qs('#rel-ensaios-sort');
+const btnEnsaiosExportCsv = qs('#rel-ensaios-export-csv');
+const btnEnsaiosExportXls = qs('#rel-ensaios-export-xls');
+const btnEnsaiosCopy = qs('#rel-ensaios-copy');
+const relBairroSel = qs('#rel-bairro');
+const relEnsaiosNextOnly = qs('#rel-ensaios-next-only');
 btnRelApply && btnRelApply.addEventListener('click', ()=>{ if(typeof renderRelatorios==='function') renderRelatorios(); });
-btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYearSel.value=''; if(relMonthSel) relMonthSel.value=''; if(relCidadeSel) relCidadeSel.value=''; if(relTipoSel) relTipoSel.value=''; if(typeof renderRelatorios==='function') renderRelatorios(); });
+btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYearSel.value=''; if(relMonthSel) relMonthSel.value=''; if(relCidadeSel) relCidadeSel.value=''; if(relBairroSel) relBairroSel.value=''; if(relEnsaiosSortSel) relEnsaiosSortSel.value='cidade'; if(relEnsaiosNextOnly) relEnsaiosNextOnly.checked=false; if(relTipoSel) relTipoSel.value=''; if(typeof renderRelatorios==='function') renderRelatorios(); });
   let eventosCache = [];
   let congregacoesCacheEvents = [];
   let congregacoesByIdEvents = {};
@@ -788,16 +795,80 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       return { tipo, dia, horario };
     }).filter(c=> c.tipo && c.dia && c.horario);
   }
-  // Coleta dados de Ensaio (Regional/Local, Meses e Horário)
-  function collectEnsaio(){
+  // Utilitário: obter número de dias no mês
+  function daysInMonth(year, monthIndex){
+    return new Date(year, monthIndex+1, 0).getDate();
+  }
+  // Utilitário: encontrar a data da Nª ocorrência de um dia da semana em um mês
+  // weekdayIndex: 0=Domingo..6=Sábado; monthIndex: 0..11; nth: 1..5
+  function nthWeekdayOfMonth(year, monthIndex, weekdayIndex, nth){
+    if(!year || year<1900 || monthIndex<0 || monthIndex>11 || weekdayIndex<0 || weekdayIndex>6 || nth<1) return null;
+    const firstDay = new Date(year, monthIndex, 1).getDay();
+    const firstOccurrence = 1 + ((weekdayIndex - firstDay + 7) % 7);
+    const date = firstOccurrence + 7 * (nth - 1);
+    const dim = daysInMonth(year, monthIndex);
+    if(date > dim) return null;
+    return new Date(year, monthIndex, date);
+  }
+  function formatYmd(date){
+    if(!(date instanceof Date) || isNaN(date)) return '';
+    const y = date.getFullYear();
+    const m = String(date.getMonth()+1).padStart(2,'0');
+    const d = String(date.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+  // Render preview de datas calculadas do Ensaio
+  function renderEnsaioPreview(){
+    const body = qs('#ensaio-preview-body');
+    if(!body) return;
     const tipoEl = qs('#ensaio-tipo');
     const horarioEl = qs('#ensaio-horario');
+    const diaEl = qs('#ensaio-dia');
+    const semanaEl = qs('#ensaio-semana');
+    const anoEl = qs('#ensaio-ano');
     const mesesWrap = qs('#ensaio-meses');
     const tipo = tipoEl ? (tipoEl.value||'') : '';
     const horario = horarioEl ? (horarioEl.value||'') : '';
+    const diaSemana = diaEl ? (diaEl.value||'') : '';
+    const semana = semanaEl ? parseInt(semanaEl.value||'',10) : NaN;
+    const ano = anoEl ? parseInt(anoEl.value||'',10) : NaN;
+    const meses = mesesWrap ? Array.from(mesesWrap.querySelectorAll('input[name="ensaioMes"]:checked')).map(inp=>parseInt(inp.value,10)).filter(n=>!isNaN(n)) : [];
+    if(!tipo || !horario || !diaSemana || !semana || !ano || !meses.length){
+      body.innerHTML = '<tr><td colspan="2" class="text-muted">Selecione dia, semana, ano e meses para calcular</td></tr>';
+      return;
+    }
+    const wd = diasIndice[diaSemana];
+    const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    body.innerHTML = meses.map(m => {
+      const date = nthWeekdayOfMonth(ano, m-1, wd, semana);
+      const ymd = date ? formatYmd(date) : '—';
+      return `<tr><td>${mesesNomes[(m||1)-1]||m}</td><td>${ymd}</td></tr>`;
+    }).join('');
+  }
+  // Coleta dados de Ensaio (Regional/Local, Meses, Horário, Dia/Semana/Ano e datas calculadas)
+  function collectEnsaio(){
+    const tipoEl = qs('#ensaio-tipo');
+    const horarioEl = qs('#ensaio-horario');
+    const diaEl = qs('#ensaio-dia');
+    const semanaEl = qs('#ensaio-semana');
+    const anoEl = qs('#ensaio-ano');
+    const mesesWrap = qs('#ensaio-meses');
+    const tipo = tipoEl ? (tipoEl.value||'') : '';
+    const horario = horarioEl ? (horarioEl.value||'') : '';
+    const diaSemana = diaEl ? (diaEl.value||'') : '';
+    const semana = semanaEl ? parseInt(semanaEl.value||'',10) : NaN;
+    const ano = anoEl ? parseInt(anoEl.value||'',10) : NaN;
     const meses = mesesWrap ? Array.from(mesesWrap.querySelectorAll('input[name="ensaioMes"]:checked')).map(inp=>parseInt(inp.value,10)).filter(n=>!isNaN(n)) : [];
     if(!tipo) return null;
-    return { tipo, meses, horario };
+    const datas = [];
+    if(diaSemana && semana && ano && meses.length){
+      const wd = diasIndice[diaSemana];
+      meses.forEach(m => {
+        const dt = nthWeekdayOfMonth(ano, m-1, wd, semana);
+        if(dt){ datas.push({ mes:m, data: formatYmd(dt) }); }
+      });
+    }
+    return { tipo, meses, horario, diaSemana, semana: (isNaN(semana)?undefined:semana), ano: (isNaN(ano)?undefined:ano), datas };
   }
   if(addCultoBtn && cultosWrapper){
     addCultoBtn.addEventListener('click', ()=>{
@@ -805,6 +876,13 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       renderCultosPreview();
     });
   }
+  // Eventos para atualizar preview do Ensaio
+  ['ensaio-tipo','ensaio-horario','ensaio-dia','ensaio-semana','ensaio-ano'].forEach(id => {
+    const el = qs(`#${id}`);
+    if(el){ el.addEventListener('change', renderEnsaioPreview); el.addEventListener('input', renderEnsaioPreview); }
+  });
+  const ensMesesWrap = qs('#ensaio-meses');
+  if(ensMesesWrap){ ensMesesWrap.addEventListener('change', renderEnsaioPreview); }
 
   // UI repeatable de vínculos de Ministério (Ancião/Diácono)
   const anciaosWrapper = qs('#anciaos-wrapper');
@@ -1081,6 +1159,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
     const list = eventosCache || [];
     const anos = new Set();
     const cidades = new Set();
+    const bairros = new Set();
     const tipos = new Set();
     list.forEach(ev=>{
       const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
@@ -1089,15 +1168,32 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       if(c) cidades.add(c);
       if(ev.tipo) tipos.add(ev.tipo);
     });
+    // Também considerar anos de ensaio das congregações
+    (congregacoesCache||[]).forEach(c=>{ const a = c.ensaio && parseInt(c.ensaio.ano,10); if(a) anos.add(a); });
+    // Também considerar cidades das congregações
+    (congregacoesCache||[]).forEach(c=>{ const city = (c.cidade||'').trim(); if(city) cidades.add(city); });
+    // Também considerar bairros das congregações
+    (congregacoesCache||[]).forEach(c=>{ const bairro = (c.bairro||'').trim(); if(bairro) bairros.add(bairro); });
     if(relYearSel){
       const sel = relYearSel.value;
       relYearSel.innerHTML = '<option value="">Todos</option>' + Array.from(anos).sort((a,b)=>a-b).map(y=> `<option value="${y}">${y}</option>`).join('');
       if(sel) relYearSel.value = sel;
     }
+    if(relMonthSel){
+      const sel = relMonthSel.value;
+      const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+      relMonthSel.innerHTML = '<option value="">Todos</option>' + mesesNomes.map((n,i)=> `<option value="${i+1}">${n}</option>`).join('');
+      if(sel) relMonthSel.value = sel;
+    }
     if(relCidadeSel){
       const sel = relCidadeSel.value;
       relCidadeSel.innerHTML = '<option value="">Todas</option>' + Array.from(cidades).sort((a,b)=> a.localeCompare(b,'pt-BR')).map(c=> `<option value="${c}">${c}</option>`).join('');
       if(sel) relCidadeSel.value = sel;
+    }
+    if(relBairroSel){
+      const sel = relBairroSel.value;
+      relBairroSel.innerHTML = '<option value="">Todos</option>' + Array.from(bairros).sort((a,b)=> a.localeCompare(b,'pt-BR')).map(b=> `<option value="${b}">${b}</option>`).join('');
+      if(sel) relBairroSel.value = sel;
     }
     if(relTipoSel){
       const sel = relTipoSel.value;
@@ -1109,6 +1205,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
     renderRelatorioEventos();
     renderRelatorioMinisterio();
     renderRelatorioCongregacoes();
+    renderRelatorioCongEnsaios();
   }
   function renderRelatorioEventos(){
     if(!relEventosEl) return;
@@ -1153,6 +1250,164 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       return;
     }
     relCongregacoesEl.textContent = `Total de congregações cadastradas: ${list.length}`;
+  }
+
+  function renderRelatorioCongEnsaios(){
+    if(!relCongEnsaiosEl) return;
+    let list = congregacoesCache || [];
+    if(!list.length){
+      relCongEnsaiosEl.innerHTML = '<li class="text-muted">Nenhuma congregação cadastrada</li>';
+      return;
+    }
+    const labelFor = (c) => c.nomeFormatado || (c.cidade && c.bairro ? `${c.cidade} - ${c.bairro}` : (c.nome||c.id));
+    const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const fmtDate = (ymd)=> (ymd && /^\d{4}-\d{2}-\d{2}$/.test(ymd)) ? (()=>{ const [y,m,d]=ymd.split('-'); return `${d}/${m}/${y}`; })() : (ymd||'-');
+    const capitalizeFirst = (s)=> !s ? '' : (s.charAt(0).toUpperCase() + s.slice(1));
+    const dowName = (ymd)=>{
+      const d = parseDateYmdLocal(ymd);
+      if(!d) return '';
+      const w = d.toLocaleDateString('pt-BR', { weekday: 'long' });
+      return capitalizeFirst(w);
+    };
+    const ySel = (relYearSel && relYearSel.value) ? parseInt(relYearSel.value,10) : null;
+    const mSel = (relMonthSel && relMonthSel.value) ? parseInt(relMonthSel.value,10) : null;
+    const citySel = (relCidadeSel && relCidadeSel.value) ? String(relCidadeSel.value) : '';
+    const bairroSel = (relBairroSel && relBairroSel.value) ? String(relBairroSel.value) : '';
+    const sortMode = (relEnsaiosSortSel && relEnsaiosSortSel.value) ? relEnsaiosSortSel.value : 'cidade';
+    const nextOnly = !!(relEnsaiosNextOnly && relEnsaiosNextOnly.checked);
+
+    // Filtrar por ano do ensaio, se selecionado
+    if(ySel){ list = list.filter(c => c.ensaio && parseInt(c.ensaio.ano,10) === ySel); }
+    // Filtrar por cidade, se selecionado
+    if(citySel){ list = list.filter(c => (c.cidade||'') === citySel); }
+    // Filtrar por bairro, se selecionado
+    if(bairroSel){ list = list.filter(c => (c.bairro||'') === bairroSel); }
+
+    const now = new Date();
+    const nextDate = (e) => {
+      const arr = (Array.isArray(e && e.datas ? e.datas : []) ? e.datas : [])
+        .map(d=> parseDateYmdLocal(d.data))
+        .filter(d=> d && d.getTime() >= now.getTime())
+        .sort((a,b)=> a - b);
+      return arr[0] || null;
+    };
+
+    const sorted = [...list].sort((a,b)=>{
+      if(sortMode === 'proximo'){
+        const na = nextDate(a.ensaio);
+        const nb = nextDate(b.ensaio);
+        const va = na ? na.getTime() : Number.POSITIVE_INFINITY;
+        const vb = nb ? nb.getTime() : Number.POSITIVE_INFINITY;
+        if(va === vb) return (labelFor(a)||'').localeCompare(labelFor(b)||'', undefined, { sensitivity: 'base' });
+        return va - vb;
+      }
+      return (labelFor(a)||'').localeCompare(labelFor(b)||'', undefined, { sensitivity: 'base' });
+    });
+
+    const lines = sorted.map(c => {
+      const e = c.ensaio || {};
+      const datas = Array.isArray(e.datas) ? e.datas.slice() : [];
+      let filtered = datas
+        .filter(d=> !mSel || parseInt(d.mes,10) === mSel)
+        .sort((a,b)=> (a.mes||0)-(b.mes||0));
+      if(nextOnly){
+        const arr = filtered
+          .map(d=> ({...d, _date: parseDateYmdLocal(d.data)}))
+          .filter(x=> x._date && x._date.getTime() >= now.getTime())
+          .sort((a,b)=> a._date - b._date);
+        filtered = arr.length ? [arr[0]] : [];
+      }
+      const horarioStr = e.horario ? ` às ${e.horario}` : '';
+      const items = filtered.length
+        ? filtered.map(d=> `${mesesNomes[(d.mes||1)-1]||d.mes}: ${fmtDate(d.data)} (${dowName(d.data)})${horarioStr}`).join(', ')
+        : '—';
+      const tipo = e.tipo ? ` (${e.tipo})` : '';
+      return `<li><strong>${labelFor(c)}</strong>${tipo}: ${items}</li>`;
+    });
+    relCongEnsaiosEl.innerHTML = lines.join('');
+
+    // Export helpers
+    const getExportRows = () => {
+      const rows = [];
+      sorted.forEach(c => {
+        const e = c.ensaio || {};
+        const datas = Array.isArray(e.datas) ? e.datas.slice() : [];
+        let filtered = datas
+          .filter(d=> !mSel || parseInt(d.mes,10) === mSel)
+          .sort((a,b)=> (a.mes||0)-(b.mes||0));
+        if(nextOnly){
+          const arr = filtered
+            .map(d=> ({...d, _date: parseDateYmdLocal(d.data)}))
+            .filter(x=> x._date && x._date.getTime() >= now.getTime())
+            .sort((a,b)=> a._date - b._date);
+          filtered = arr.length ? [arr[0]] : [];
+        }
+        filtered.forEach(d => {
+          rows.push({
+            Congregacao: labelFor(c),
+            Tipo: e.tipo||'',
+            Ano: e.ano||'',
+            Mes: d.mes||'',
+            Data: fmtDate(d.data),
+            DiaSemana: dowName(d.data),
+            Horario: e.horario||'',
+          });
+        });
+      });
+      return rows;
+    };
+    const toCsv = (rows) => {
+      if(!rows.length) return 'Congregacao,Tipo,Ano,Mes,Data,DiaSemana,Horario\n';
+      const headers = Object.keys(rows[0]);
+      const esc = (v)=> String(v||'').replace(/"/g,'""');
+      const lines = [headers.join(',')].concat(rows.map(r=> headers.map(h=> `"${esc(r[h])}"`).join(',')));
+      return lines.join('\n');
+    };
+    const toXls = (rows) => {
+      // Simples TSV (compatível com Excel)
+      if(!rows.length) return 'Congregacao\tTipo\tAno\tMes\tData\tDiaSemana\tHorario\n';
+      const headers = Object.keys(rows[0]);
+      const esc = (v)=> String(v||'').replace(/\t/g,' ');
+      const lines = [headers.join('\t')].concat(rows.map(r=> headers.map(h=> esc(r[h])).join('\t')));
+      return lines.join('\n');
+    };
+    const download = (filename, content, mime) => {
+      const blob = new Blob([content], { type: mime || 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+    };
+    if(btnEnsaiosExportCsv){
+      btnEnsaiosExportCsv.onclick = () => {
+        const rows = getExportRows();
+        const csv = toCsv(rows);
+        download('ensaios.csv', csv, 'text/csv;charset=utf-8');
+      };
+    }
+    if(btnEnsaiosExportXls){
+      btnEnsaiosExportXls.onclick = () => {
+        const rows = getExportRows();
+        const xls = toXls(rows);
+        download('ensaios.xls', xls, 'application/vnd.ms-excel');
+      };
+    }
+    if(btnEnsaiosCopy){
+      btnEnsaiosCopy.onclick = async () => {
+        const rows = getExportRows();
+        const text = rows.map(r=> `${r.Congregacao} | ${r.Tipo} | ${r.Ano}-${r.Mes} | ${r.Data} (${r.DiaSemana}) ${r.Horario}`).join('\n');
+        try{
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            await navigator.clipboard.writeText(text);
+            toast('Copiado para a área de transferência');
+          } else {
+            const ta = document.createElement('textarea');
+            ta.value = text; document.body.appendChild(ta); ta.select();
+            document.execCommand('copy'); ta.remove(); toast('Copiado');
+          }
+        }catch(err){ console.error(err); toast('Falha ao copiar', 'error'); }
+      };
+    }
   }
 
   // Relatórios: impressão e exportação com filtros aplicados
@@ -1428,6 +1683,15 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           const icon = `<span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l4 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>`;
           return `<div class="meta ensaio-line">${icon}Ensaio ${e.tipo}: ${mesesStr}${horarioStr}</div>`;
         })();
+        // Datas calculadas de Ensaio por mês (se disponíveis)
+        const ensaioDatasLine = (function(){
+          const e = c.ensaio;
+          if(!e || !Array.isArray(e.datas) || !e.datas.length) return '';
+          const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+          const fmt = (ymd)=> (ymd && /^\d{4}-\d{2}-\d{2}$/.test(ymd)) ? (()=>{ const [y,m,d]=ymd.split('-'); return `${d}/${m}/${y}`; })() : (ymd||'-');
+          const items = e.datas.slice().sort((a,b)=> (a.mes||0)-(b.mes||0)).map(d=> `${mesesNomes[(d.mes||1)-1]||d.mes}: ${fmt(d.data)}`).join(', ');
+          return `<div class="meta ensaio-line">Datas de Ensaio: ${items}</div>`;
+        })();
         return `
           <div class="item">
             <div>
@@ -1440,6 +1704,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
               ${cultosOficiais}
               ${cultosRjm}
               ${ensaioLine}
+              ${ensaioDatasLine}
             </div>
             <div>
               <button class="btn btn-sm btn-outline-secondary" data-action="edit-cong" data-id="${c.id}">Editar</button>
@@ -1501,10 +1766,16 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       // Pré-carregar Ensaio no formulário (tipo, meses e horário)
       const ensTipoSel = qs('#ensaio-tipo');
       const ensHorarioInp = qs('#ensaio-horario');
+      const ensDiaSel = qs('#ensaio-dia');
+      const ensSemanaSel = qs('#ensaio-semana');
+      const ensAnoInp = qs('#ensaio-ano');
       const ensMesesWrap = qs('#ensaio-meses');
       const ens = c.ensaio || null;
       if(ensTipoSel) ensTipoSel.value = (ens && ens.tipo) ? ens.tipo : '';
       if(ensHorarioInp) ensHorarioInp.value = (ens && ens.horario) ? ens.horario : '';
+      if(ensDiaSel) ensDiaSel.value = (ens && ens.diaSemana) ? ens.diaSemana : '';
+      if(ensSemanaSel) ensSemanaSel.value = (ens && ens.semana) ? String(ens.semana) : '';
+      if(ensAnoInp) ensAnoInp.value = (ens && ens.ano) ? String(ens.ano) : '';
       if(ensMesesWrap){
         const allChecks = Array.from(ensMesesWrap.querySelectorAll('input[name="ensaioMes"]'));
         allChecks.forEach(ch => { ch.checked = false; });
@@ -1514,6 +1785,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           if(chk) chk.checked = true;
         });
       }
+      renderEnsaioPreview();
     }
     if(listaCong){
       listaCong.addEventListener('click', async (e)=>{
