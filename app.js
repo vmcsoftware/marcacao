@@ -183,9 +183,12 @@ const relEnsaiosNextOnly = qs('#rel-ensaios-next-only');
       if(!db){ if(typeof renderRelatorios==='function') renderRelatorios(); return; }
       const y = relYearSel && relYearSel.value ? parseInt(relYearSel.value,10) : null;
       const m = relMonthSel && relMonthSel.value ? parseInt(relMonthSel.value,10) : null;
+      const cidade = relCidadeSel && relCidadeSel.value ? relCidadeSel.value : '';
       const tipo = relTipoSel && relTipoSel.value ? relTipoSel.value : '';
       let snap;
-      if(tipo){
+      if(cidade){
+        snap = await db.ref('eventos').orderByChild('cidade').equalTo(cidade).once('value');
+      } else if(tipo){
         snap = await db.ref('eventos').orderByChild('tipo').equalTo(tipo).once('value');
       } else if(y && m){
         const mm = `${m}`.padStart(2,'0');
@@ -348,6 +351,8 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         const congOpt = eventoCong.querySelector(`option[value="${data.congregacaoId}"]`);
         congregacaoNome = congOpt ? congOpt.textContent : '';
       }
+      // Cidade da congregação (denormalizado)
+      const cidadeEvento = (congregacoesByIdEvents && congregacoesByIdEvents[data.congregacaoId] && congregacoesByIdEvents[data.congregacaoId].cidade) ? (congregacoesByIdEvents[data.congregacaoId].cidade||'') : '';
       try{
         if(editId){
           const res = await update('eventos', editId, {
@@ -355,6 +360,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
             data: data.data,
             congregacaoId: data.congregacaoId,
             congregacaoNome: congregacaoNome,
+            cidade: cidadeEvento,
             atendenteId: data.atendenteId,
             atendenteNome: atendenteNome,
             observacoes: data.observacoes||''
@@ -366,6 +372,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
             data: data.data,
             congregacaoId: data.congregacaoId,
             congregacaoNome: congregacaoNome,
+            cidade: cidadeEvento,
             atendenteId: data.atendenteId,
             atendenteNome: atendenteNome,
             observacoes: data.observacoes||''
@@ -1167,6 +1174,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
 
   // Relatórios: render helpers
   function cidadeDoEventoRel(ev){
+    if(ev && ev.cidade) return ev.cidade;
     const cong = (typeof congregacoesByIdEvents!=='undefined' && congregacoesByIdEvents) ? congregacoesByIdEvents[ev.congregacaoId] : null;
     if(cong && cong.cidade) return cong.cidade;
     const label = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
@@ -2048,11 +2056,13 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         }
 
         try{
+          const cidadeEventoAg = (congregacoesByIdEvents && congregacoesByIdEvents[congId] && congregacoesByIdEvents[congId].cidade) ? (congregacoesByIdEvents[congId].cidade||'') : '';
           const saved = await write('eventos', {
             tipo,
             data,
             congregacaoId: congId,
             congregacaoNome: label,
+            cidade: cidadeEventoAg,
             atendenteId: manualNome ? '' : (atendenteId||''),
             atendenteNome: atendenteNome,
             atendenteOutraRegiao: !!manualNome,
