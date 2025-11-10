@@ -3336,6 +3336,18 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
 
       const headerContent = document.querySelector('.app-header .header-content');
       if(headerContent){
+        const wrap = document.createElement('div');
+        wrap.className = 'theme-control';
+
+        const icon = document.createElement('span');
+        icon.className = 'icon';
+        icon.setAttribute('aria-hidden','true');
+        icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M12 2a1 1 0 011 1v3a1 1 0 11-2 0V3a1 1 0 011-1zm0 16a4 4 0 100-8 4 4 0 000 8zm8-6a1 1 0 011 1h3a1 1 0 110 2h-3a1 1 0 11-2 0 1 1 0 011-1zm-17 1a1 1 0 011-1H2a1 1 0 110-2h3a1 1 0 110 2H3a1 1 0 01-1 1zm14.95-6.364a1 1 0 011.414 0l2.121 2.121a1 1 0 11-1.414 1.414L18.95 7.05a1 1 0 010-1.414zM4.93 16.97a1 1 0 011.414 0l2.121 2.121a1 1 0 11-1.414 1.414L4.93 18.384a1 1 0 010-1.414zM4.93 7.05a1 1 0 010 1.414L2.808 10.585A1 1 0 111.394 9.17L3.515 7.05A1 1 0 014.93 7.05zm13.435 9.92a1 1 0 010 1.414l-2.121 2.121a1 1 0 11-1.414-1.414l2.121-2.121a1 1 0 011.414 0z" fill="currentColor"/></svg>';
+
+        const label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = 'Tema';
+
         const select = document.createElement('select');
         select.id = 'theme-select';
         select.className = 'theme-picker form-select form-select-sm';
@@ -3351,7 +3363,11 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           localStorage.setItem('themePref', pref);
           applyTheme(pref);
         });
-        headerContent.appendChild(select);
+
+        wrap.appendChild(icon);
+        wrap.appendChild(label);
+        wrap.appendChild(select);
+        headerContent.appendChild(wrap);
       }
 
       if(media && media.addEventListener){
