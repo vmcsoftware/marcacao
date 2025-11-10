@@ -1915,6 +1915,9 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
             // Scroll suave até o formulário e foco no primeiro campo
             formCong.scrollIntoView({ behavior: 'smooth', block: 'start' });
             setTimeout(()=>{ firstInput && firstInput.focus && firstInput.focus(); }, 150);
+            // Aplicar destaque visual temporário
+            formCong.classList.add('form-highlight');
+            setTimeout(()=>{ formCong.classList.remove('form-highlight'); }, 1800);
           }
         }
       });

@@ -812,3 +812,25 @@ legend {
 /* Responsividade de Container */
 @media (min-width: 992px) { .container { max-width: 1100px; } }
 @media (min-width: 1200px) { .container { max-width: 1300px; } }
+/* Interação visual para itens de congregação */
+.cong-name { cursor: pointer; }
+.cong-name:hover { text-decoration: underline; }
+
+/* Destaque temporário do formulário ao iniciar edição */
+.form-highlight {
+  animation: formGlow 1.8s ease-out;
+}
+@keyframes formGlow {
+  0% {
+    box-shadow: 0 0 0 rgba(255, 193, 7, 0);
+    background-color: #fff8e1;
+  }
+  40% {
+    box-shadow: 0 0 12px rgba(255, 193, 7, 0.6);
+    background-color: #fff3cd;
+  }
+  100% {
+    box-shadow: none;
+    background-color: transparent;
+  }
+}
