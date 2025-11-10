@@ -3226,6 +3226,8 @@ async function backfillEventosCidade(){
     const evSnap = await db.ref('eventos').once('value');
     const eventos = evSnap.val() || {};
     const ops = [];
+    const summaryByCity = {};
+    const updatedIds = [];
     Object.values(eventos).forEach(ev => {
       const id = ev && ev.id;
       const congId = ev && ev.congregacaoId;
@@ -3233,11 +3235,20 @@ async function backfillEventosCidade(){
       const city = (congregacoes[congId] && congregacoes[congId].cidade) || '';
       if(id && congId && !hasCidade && city){
         ops.push(db.ref(`eventos/${id}/cidade`).set(city));
+        summaryByCity[city] = (summaryByCity[city] || 0) + 1;
+        updatedIds.push(id);
       }
     });
     if(ops.length){
       await Promise.all(ops);
-      toast(`Backfill concluído: ${ops.length} eventos atualizados.`);
+      const total = ops.length;
+      const cities = Object.keys(summaryByCity).sort((a,b)=>summaryByCity[b]-summaryByCity[a]);
+      const top = cities.slice(0,5).map(c=>`${c}: ${summaryByCity[c]}`).join(', ');
+      toast(`Backfill concluído: ${total} eventos. Top cidades: ${top || 'n/a'}`);
+      try{
+        console.table(Object.entries(summaryByCity).map(([cidade, count])=>({cidade, count})));
+        console.debug('IDs atualizados (parcial):', updatedIds.slice(0,50));
+      }catch{}
     } else {
       toast('Nenhum evento precisava de backfill.');
     }
