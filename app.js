@@ -1768,10 +1768,12 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           return `<div class="meta ensaio-line">Datas de Ensaio: ${items}</div>`;
         })();
         return `
-          <div class="item">
-            <div>
-              <strong>${labelFor(c)}</strong>
-              <div class="meta">Endereço: ${c.endereco}</div>
+          <div class="item cong-item" data-id="${c.id}">
+            <div class="cong-header">
+              <strong class="cong-name" data-id="${c.id}">${labelFor(c)}</strong>
+            </div>
+            <div class="cong-details hidden">
+              <div class="meta">Endereço: ${c.endereco||'-'}</div>
               <div class="meta">${eldersLabel}: ${eldersAllFormatted || '-'}</div>
               <div class="meta">${deaconsLabel}: ${deaconsAllFormatted || '-'}</div>
               ${coLine}
@@ -1780,10 +1782,10 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
               ${cultosRjm}
               ${ensaioLine}
               ${ensaioDatasLine}
-            </div>
-            <div>
-              <button class="btn btn-sm btn-outline-secondary" data-action="edit-cong" data-id="${c.id}">Editar</button>
-              <button class="btn btn-sm btn-outline-danger" data-action="delete-cong" data-id="${c.id}">Excluir</button>
+              <div class="cong-actions">
+                <button class="btn btn-sm btn-outline-secondary" data-action="edit-cong" data-id="${c.id}">Editar</button>
+                <button class="btn btn-sm btn-outline-danger" data-action="delete-cong" data-id="${c.id}">Excluir</button>
+              </div>
             </div>
           </div>
         `;
@@ -1864,6 +1866,14 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
     }
     if(listaCong){
       listaCong.addEventListener('click', async (e)=>{
+        // Toggle de detalhes ao clicar no nome da congregação
+        const nameEl = e.target.closest('.cong-name');
+        if(nameEl){
+          const item = nameEl.closest('.cong-item');
+          const details = item && item.querySelector('.cong-details');
+          if(details){ details.classList.toggle('hidden'); }
+          return; // não propagar para outras ações
+        }
         const btnDel = e.target.closest('button[data-action="delete-cong"]');
         const btnEdit = e.target.closest('button[data-action=\"edit-cong\"]');
         if(btnDel){
