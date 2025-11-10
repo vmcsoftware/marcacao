@@ -1908,6 +1908,14 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           const id = btnEdit.getAttribute('data-id');
           const c = congregacoesCache.find(x=>x.id===id);
           startEditCongregacao(c);
+          // Tornar o formulário visível e focar no primeiro campo
+          if(formCong){
+            formCong.classList.remove('hidden');
+            const firstInput = formCong.querySelector('input, select, textarea');
+            // Scroll suave até o formulário e foco no primeiro campo
+            formCong.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setTimeout(()=>{ firstInput && firstInput.focus && firstInput.focus(); }, 150);
+          }
         }
       });
       formCong && formCong.addEventListener('reset', ()=>{
