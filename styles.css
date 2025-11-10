@@ -216,26 +216,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Toggle de Tema */
-.theme-toggle {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 50;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border-color);
-  background: var(--white);
-  color: var(--text-color);
-  box-shadow: var(--shadow-sm);
-  cursor: pointer;
-  user-select: none;
+/* Seletor de tema no cabeçalho */
+.theme-picker {
+  max-width: 160px;
+  margin-left: auto;
 }
-.theme-toggle:hover { box-shadow: var(--shadow-md); }
-.theme-toggle .icon { display: inline-flex; }
-.theme-toggle .icon svg { width: 18px; height: 18px; }
+@media (max-width: 767px) {
+  .theme-picker { width: 100%; max-width: none; }
+}
 
 /* Formulários */
 .form-grid {
