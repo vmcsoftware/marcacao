@@ -20,6 +20,20 @@
   --transition-speed: 0.2s;
 }
 
+/* Tema Escuro */
+[data-theme="dark"] {
+  --primary-color: #60a5fa; /* blue-400 */
+  --secondary-color: #93c5fd; /* blue-300 */
+  --accent-color: #34d399; /* emerald-400 */
+  --text-color: #e5e7eb; /* texto claro */
+  --text-light: #9ca3af;
+  --light-bg: #0b1220; /* fundo escuro */
+  --white: #0f172a; /* superfícies */
+  --border-color: #1f2a37;
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
 /* Reset e Tipografia */
 body {
   font-family: 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -30,6 +44,7 @@ body {
   padding: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -199,6 +214,28 @@ h1, h2, h3, h4, h5, h6 {
 .card:hover {
   box-shadow: var(--shadow-md);
 }
+
+/* Toggle de Tema */
+.theme-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--white);
+  color: var(--text-color);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  user-select: none;
+}
+.theme-toggle:hover { box-shadow: var(--shadow-md); }
+.theme-toggle .icon { display: inline-flex; }
+.theme-toggle .icon svg { width: 18px; height: 18px; }
 
 /* Formulários */
 .form-grid {

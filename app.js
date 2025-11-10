@@ -3315,6 +3315,26 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       if(btnCal) btnCal.addEventListener('click', openEventosCalendar);
     }catch{}
   });
+  // Toggle de Tema (Claro/Escuro)
+  document.addEventListener('DOMContentLoaded', function(){
+    try{
+      const root = document.documentElement;
+      const saved = localStorage.getItem('theme');
+      if(saved){ root.setAttribute('data-theme', saved); }
+      const btn = document.createElement('button');
+      btn.className = 'theme-toggle';
+      btn.setAttribute('type', 'button');
+      btn.setAttribute('aria-label', 'Alternar tema');
+      btn.innerHTML = '<span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2a1 1 0 011 1v3a1 1 0 11-2 0V3a1 1 0 011-1zm0 16a4 4 0 100-8 4 4 0 000 8zm8-6a1 1 0 011 1h3a1 1 0 110 2h-3a1 1 0 11-2 0 1 1 0 011-1zm-17 1a1 1 0 011-1H2a1 1 0 110-2h3a1 1 0 110 2H3a1 1 0 01-1 1zm14.95-6.364a1 1 0 011.414 0l2.121 2.121a1 1 0 11-1.414 1.414L18.95 7.05a1 1 0 010-1.414zM4.93 16.97a1 1 0 011.414 0l2.121 2.121a1 1 0 11-1.414 1.414L4.93 18.384a1 1 0 010-1.414zM4.93 7.05a1 1 0 010 1.414L2.808 10.585A1 1 0 111.394 9.17L3.515 7.05A1 1 0 014.93 7.05zm13.435 9.92a1 1 0 010 1.414l-2.121 2.121a1 1 0 11-1.414-1.414l2.121-2.121a1 1 0 011.414 0z" fill="currentColor"/></svg></span><span class="label">Tema</span>';
+      btn.addEventListener('click', ()=>{
+        const current = root.getAttribute('data-theme')||'light';
+        const next = current==='dark'? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+      });
+      document.body.appendChild(btn);
+    }catch{}
+  });
 // Admin: backfill de cidade nos eventos antigos
 function isAdminUser(){
   try{
