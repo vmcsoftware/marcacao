@@ -1133,7 +1133,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
 
     // Popula selects de vínculos do Ensaio
     populateMinistrySelect(ensEncLocalSel, list, m=>m.funcao==='Encarregado Local');
-    populateMinistrySelect(ensEncRegRespSel, list, m=>m.funcao==='Encarregado Regional');
+    populateMinistrySelect(ensEncRegRespSel, list, m=>m.funcao==='Encarregado Regional' && m.encRegResponsavel);
     populateMinistrySelect(ensExaminadoraSel, list, m=>m.funcao==='Examinadora');
 
     // Listar Ministério
@@ -1650,6 +1650,8 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         if(ar) ar.checked = !!m.anciaoResponsavel;
         if(dl) dl.checked = !!m.diaconoLocal;
         if(dr) dr.checked = !!m.diaconoResponsavel;
+        const err = formMinEl.querySelector('input[name="encRegResponsavel"]');
+        if(err) err.checked = !!m.encRegResponsavel;
       }
     });
     const formMinResetEl = qs('#form-ministerio');
@@ -1906,10 +1908,19 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           if(chk) chk.checked = true;
         });
       }
-      // Pré-carregar vínculos do Ensaio
-      if(ensEncLocalSel) ensEncLocalSel.value = (ens && ens.encLocalId) ? ens.encLocalId : '';
-      if(ensEncRegRespSel) ensEncRegRespSel.value = (ens && ens.encRegResponsavelId) ? ens.encRegResponsavelId : '';
-      if(ensExaminadoraSel) ensExaminadoraSel.value = (ens && ens.examinadoraId) ? ens.examinadoraId : '';
+      // Repopular e pré-carregar vínculos do Ensaio
+      if(ensEncLocalSel){
+        populateMinistrySelect(ensEncLocalSel, ministryCache, (m)=> m.funcao==='Encarregado Local' && m.congregacaoId===c.id);
+        ensEncLocalSel.value = (ens && ens.encLocalId) ? ens.encLocalId : '';
+      }
+      if(ensEncRegRespSel){
+        populateMinistrySelect(ensEncRegRespSel, ministryCache, (m)=> m.funcao==='Encarregado Regional' && m.encRegResponsavel);
+        ensEncRegRespSel.value = (ens && ens.encRegResponsavelId) ? ens.encRegResponsavelId : '';
+      }
+      if(ensExaminadoraSel){
+        populateMinistrySelect(ensExaminadoraSel, ministryCache, (m)=> m.funcao==='Examinadora');
+        ensExaminadoraSel.value = (ens && ens.examinadoraId) ? ens.examinadoraId : '';
+      }
       renderEnsaioPreview();
     }
     if(listaCong){
@@ -2002,6 +2013,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         anciaoResponsavel: !!data.anciaoResponsavel,
         diaconoLocal: !!data.diaconoLocal,
         diaconoResponsavel: !!data.diaconoResponsavel,
+        encRegResponsavel: !!data.encRegResponsavel,
       };
       try{
         const editId = formMin.dataset.editId;
