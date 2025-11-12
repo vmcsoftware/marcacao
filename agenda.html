@@ -10,9 +10,11 @@
       --cal-muted: #9ca3af;
       --cal-today: #2563eb;
       --cal-today-bg: #eff6ff;
-      --cal-event-bg: #f3f4f6;
-      --cal-event-pill: #111827;
-      --cal-event-pill-bg: #e5e7eb;
+      --cal-event-bg: #f8fafc;
+      --cal-event-pill: #374151;
+      --cal-event-pill-bg: #eef2f7;
+      --cal-selected-outline: #93c5fd;
+      --cal-selected-bg: #f0f9ff;
     }
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; margin: 0; }
     header { border-bottom: 1px solid var(--cal-border); padding: 12px 16px; display: flex; align-items: center; gap: 12px; justify-content: space-between; }
@@ -20,24 +22,33 @@
     .nav a { color: #111827; text-decoration: none; font-weight: 500; }
     .container { max-width: 1100px; margin: 16px auto; padding: 0 16px; }
     .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
-    .month-label { font-size: 18px; font-weight: 600; }
-    .btn { appearance: none; border: 1px solid var(--cal-border); background: white; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-weight: 500; }
+    .month-label { font-size: 18px; font-weight: 600; color: #111827; }
+    .btn { appearance: none; border: 1px solid var(--cal-border); background: white; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-weight: 500; color: #111827; }
     .btn:hover { background: #f9fafb; }
 
-    .calendar { border: 1px solid var(--cal-border); border-radius: 12px; overflow: hidden; }
+    .calendar { border: 1px solid var(--cal-border); border-radius: 12px; overflow: hidden; background: white; }
     .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); font-size: 12px; color: var(--cal-muted); }
     .cal-weekdays div { padding: 10px; text-align: center; font-weight: 600; }
-    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid var(--cal-border); }
-    .cal-cell { min-height: 120px; border-left: 1px solid var(--cal-border); border-top: 1px solid var(--cal-border); padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--cal-border); }
+    .cal-cell { min-height: 100px; border: none; background: white; padding: 6px; display: flex; flex-direction: column; gap: 4px; transition: background .15s ease, box-shadow .15s ease; }
     .cal-cell:nth-child(7n+1) { border-left: none; }
+    .cal-cell:hover { background: #f9fafb; }
+    .cal-cell.selected { outline: 2px solid var(--cal-selected-outline); outline-offset: -2px; background: var(--cal-selected-bg); }
     .cal-day { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #111827; }
     .cal-day .muted { color: var(--cal-muted); }
     .cal-day .today { color: var(--cal-today); background: var(--cal-today-bg); border-radius: 999px; padding: 2px 6px; font-weight: 700; }
 
-    .event { background: var(--cal-event-bg); border-radius: 8px; padding: 6px; font-size: 12px; line-height: 1.2; display: flex; flex-direction: column; gap: 3px; }
-    .event .title { font-weight: 600; }
+    .event { background: var(--cal-event-bg); border-radius: 8px; padding: 4px; font-size: 12px; line-height: 1.2; display: flex; flex-direction: column; gap: 2px; }
+    .event .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .event .meta { color: #374151; }
     .pill { display: inline-flex; align-items: center; gap: 6px; background: var(--cal-event-pill-bg); color: var(--cal-event-pill); border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+
+    .summary-tabs { display: flex; gap: 6px; align-items: center; }
+    .summary-tab-btn.active { background: #f0f9ff; border-color: var(--cal-selected-outline); }
+    .summary-tab-content { display: none; }
+    .summary-tab-content.active { display: block; }
+    .list li { padding: 4px 0; }
+    .list .title { display: inline-block; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     @media (max-width: 720px) {
       .cal-cell { min-height: 100px; }
@@ -73,8 +84,25 @@
   <main id="agenda-month-root" class="container">
     <div class="toolbar">
       <div class="month-label" id="agenda-month-label">Carregando…</div>
-      <div style="display:flex; gap:8px;">
-        <button id="agenda-today-btn" class="btn">Hoje</button>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <label for="agenda-month-select" class="form-label mb-0">Mês</label>
+        <select id="agenda-month-select" class="form-select form-select-sm" style="width:auto;">
+          <option value="1">Jan</option>
+          <option value="2">Fev</option>
+          <option value="3">Mar</option>
+          <option value="4">Abr</option>
+          <option value="5">Mai</option>
+          <option value="6">Jun</option>
+          <option value="7">Jul</option>
+          <option value="8">Ago</option>
+          <option value="9">Set</option>
+          <option value="10">Out</option>
+          <option value="11">Nov</option>
+          <option value="12">Dez</option>
+        </select>
+        <label for="agenda-year-select" class="form-label mb-0">Ano</label>
+        <select id="agenda-year-select" class="form-select form-select-sm" style="width:auto;"></select>
+        <button id="agenda-today-btn" class="btn btn-sm">Hoje</button>
       </div>
     </div>
 
@@ -89,6 +117,31 @@
         <div>Sáb</div>
       </div>
       <div id="agenda-month-grid" class="cal-grid"></div>
+    </section>
+
+    <section class="mt-3">
+      <h4>Detalhes do Dia</h4>
+      <div id="agenda-day-details" class="card p-2">
+        <div class="text-muted" id="agenda-day-details-title">Selecione um dia no calendário</div>
+        <ul id="agenda-day-details-list" class="list mt-2"></ul>
+      </div>
+    </section>
+
+    <section class="mt-3 mb-4">
+      <div class="summary-tabs">
+        <button class="btn btn-sm summary-tab-btn active" data-tab="day">Hoje</button>
+        <button class="btn btn-sm summary-tab-btn" data-tab="month">Mês</button>
+        <button class="btn btn-sm summary-tab-btn" data-tab="year">Ano</button>
+      </div>
+      <div class="summary-tab-content active" data-tab="day">
+        <ul id="agenda-day-list" class="list"></ul>
+      </div>
+      <div class="summary-tab-content" data-tab="month">
+        <ul id="agenda-month-list" class="list"></ul>
+      </div>
+      <div class="summary-tab-content" data-tab="year">
+        <ul id="agenda-year-list" class="list"></ul>
+      </div>
     </section>
   </main>
 

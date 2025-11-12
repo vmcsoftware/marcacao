@@ -2749,11 +2749,22 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
     const agendaMonthLabel = qs('#agenda-month-label');
     const agendaMonthGrid = qs('#agenda-month-grid');
     const agendaTodayBtn = qs('#agenda-today-btn');
+    const agendaDayList = qs('#agenda-day-list');
+    const agendaMonthList = qs('#agenda-month-list');
+    const agendaYearList = qs('#agenda-year-list');
+    const agendaMonthSel = qs('#agenda-month-select');
+    const agendaYearSel = qs('#agenda-year-select');
+    const agendaDayDetails = qs('#agenda-day-details');
+    const agendaDayDetailsTitle = qs('#agenda-day-details-title');
+    const agendaDayDetailsList = qs('#agenda-day-details-list');
+    const summaryTabBtns = Array.from(document.querySelectorAll('.summary-tab-btn'));
+    const summaryTabContents = Array.from(document.querySelectorAll('.summary-tab-content'));
 
     let viewDate = new Date();
     let eventosCal = [];
     let agenda2026Cal = [];
     let congregacoesReady = false;
+    let selectedYmd = null;
 
     function monthLabel(d) {
       const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -2831,7 +2842,8 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         const key = yyyyMmDd(d);
         const dayEvents = byDay.get(key) || [];
 
-        html += '<div class="cal-cell">';
+        const selectedClass = (selectedYmd && selectedYmd === key) ? ' selected' : '';
+        html += `<div class="cal-cell${selectedClass}" data-ymd="${key}">`;
         html += '<div class="cal-day">';
         if (isToday) {
           html += `<span class="today">${d.getDate()}</span>`;
@@ -2856,33 +2868,147 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       agendaMonthGrid.innerHTML = html;
     }
 
+    function fmtDatePt(d){
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    }
+
+    function renderDayDetails(){
+      if(!agendaDayDetails || !agendaDayDetailsTitle || !agendaDayDetailsList) return;
+      if(!selectedYmd){
+        agendaDayDetailsTitle.textContent = 'Selecione um dia no calendário';
+        agendaDayDetailsList.innerHTML = '';
+        return;
+      }
+      const byDay = eventsByDayInView();
+      const items = (byDay.get(selectedYmd)||[]).slice().sort((a,b)=> (a.hora||'').localeCompare(b.hora||''));
+      const parts = selectedYmd.split('-');
+      const d = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10));
+      agendaDayDetailsTitle.textContent = `Eventos em ${fmtDatePt(d)}`;
+      const itemHtml = (evt)=>{
+        const tipo = `<span class="pill">${evt.tipo}</span>`;
+        const hora = evt.hora ? ` <span class="meta">${evt.hora}</span>` : '';
+        return `<li>${tipo} <span class="title">${evt.titulo}</span>${hora}</li>`;
+      };
+      agendaDayDetailsList.innerHTML = items.length ? items.map(itemHtml).join('') : '<li class="text-muted">Nenhum evento neste dia</li>';
+    }
+
+    function populateYearOptions(){
+      if(!agendaYearSel) return;
+      const yNow = new Date().getFullYear();
+      const years = [];
+      for(let y=yNow-2; y<=yNow+4; y++){ years.push(y); }
+      agendaYearSel.innerHTML = years.map(y=> `<option value="${y}">${y}</option>`).join('');
+    }
+
+    function syncSelectorsWithView(){
+      if(agendaMonthSel){ agendaMonthSel.value = String(viewDate.getMonth()+1); }
+      if(agendaYearSel){ agendaYearSel.value = String(viewDate.getFullYear()); }
+    }
+
+    function updateViewFromSelectors(){
+      const m = agendaMonthSel ? parseInt(agendaMonthSel.value,10) : (viewDate.getMonth()+1);
+      const y = agendaYearSel ? parseInt(agendaYearSel.value,10) : viewDate.getFullYear();
+      if(!isNaN(m) && !isNaN(y)){
+        viewDate = new Date(y, m-1, 1);
+        selectedYmd = null;
+        renderCalendar();
+        renderDayDetails();
+      }
+    }
+
+    function renderSummaries(){
+      const allReady = (Array.isArray(eventosCal) && Array.isArray(agenda2026Cal));
+      if(!allReady) return;
+      const all = ([]).concat(eventosCal||[], agenda2026Cal||[]).filter(evt => evt && evt.data && !isNaN(evt.data));
+      const today = new Date();
+
+      const byHora = (a,b) => (a.hora||'').localeCompare(b.hora||'');
+      const fmtDate = (d)=> `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+      const itemHtml = (evt)=>{
+        const tipo = `<span class="pill">${evt.tipo}</span>`;
+        const hora = evt.hora ? ` <span class="meta">${evt.hora}</span>` : '';
+        const dataStr = fmtDate(evt.data);
+        const dateMeta = ` <span class="meta">${dataStr}</span>`;
+        return `<li>${tipo} <span class="title">${evt.titulo}</span>${dateMeta}${hora}</li>`;
+      };
+
+      const dayItems = all.filter(e => sameYmd(e.data, today)).sort(byHora);
+      const monthItems = all.filter(e => e.data.getFullYear()===today.getFullYear() && e.data.getMonth()===today.getMonth()).sort(byHora);
+      const yearItems = all.filter(e => e.data.getFullYear()===today.getFullYear()).sort((a,b)=>{
+        const ad = a.data.getTime(); const bd = b.data.getTime();
+        if(ad!==bd) return ad-bd; return byHora(a,b);
+      });
+
+      if(agendaDayList){ agendaDayList.innerHTML = dayItems.length ? dayItems.map(itemHtml).join('') : '<li class="text-muted">Nenhum evento hoje</li>'; }
+      if(agendaMonthList){ agendaMonthList.innerHTML = monthItems.length ? monthItems.map(itemHtml).join('') : '<li class="text-muted">Nenhum evento neste mês</li>'; }
+      if(agendaYearList){ agendaYearList.innerHTML = yearItems.length ? yearItems.map(itemHtml).join('') : '<li class="text-muted">Nenhum evento neste ano</li>'; }
+    }
+
+    function setupSummaryTabs(){
+      if(!summaryTabBtns.length || !summaryTabContents.length) return;
+      const activate = (tab)=>{
+        summaryTabBtns.forEach(b=> b.classList.toggle('active', b.dataset.tab===tab));
+        summaryTabContents.forEach(c=> c.classList.toggle('active', c.dataset.tab===tab));
+      };
+      summaryTabBtns.forEach(b=>{
+        b.addEventListener('click', ()=> activate(b.dataset.tab));
+      });
+      activate('day');
+    }
+
     // Carregamentos
     readList('congregacoes', (list) => {
       congregacoesByIdEvents = {};
       (list || []).forEach(c => { congregacoesByIdEvents[c.id] = c; });
       congregacoesReady = true;
       renderCalendar();
+      renderDayDetails();
     });
 
     readList('eventos', (list) => {
       eventosCal = normalizeEventosForMonth(list);
       renderCalendar();
+      renderSummaries();
+      renderDayDetails();
     });
 
     readList('agenda2026', (list) => {
       agenda2026Cal = normalizeAgenda2026ForMonth(list);
       renderCalendar();
+      renderSummaries();
+      renderDayDetails();
     });
 
     if (agendaTodayBtn) {
       agendaTodayBtn.addEventListener('click', () => {
         viewDate = new Date();
+        syncSelectorsWithView();
+        selectedYmd = yyyyMmDd(new Date());
         renderCalendar();
+        renderDayDetails();
+      });
+    }
+
+    if(agendaMonthSel){ agendaMonthSel.addEventListener('change', updateViewFromSelectors); }
+    if(agendaYearSel){ agendaYearSel.addEventListener('change', updateViewFromSelectors); }
+
+    if(agendaMonthGrid){
+      agendaMonthGrid.addEventListener('click', (e)=>{
+        const cell = e.target.closest('.cal-cell');
+        if(!cell || !cell.dataset || !cell.dataset.ymd) return;
+        selectedYmd = cell.dataset.ymd;
+        renderCalendar();
+        renderDayDetails();
       });
     }
 
     // primeira render após DOM
+    populateYearOptions();
+    syncSelectorsWithView();
     renderCalendar();
+    renderSummaries();
+    renderDayDetails();
+    setupSummaryTabs();
   }
 
 // ===================== Dashboard (Página dashboard.html) =====================
