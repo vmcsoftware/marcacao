@@ -114,15 +114,18 @@
             <div class="grid-2">
               <div>
                 <div>
-                  <div class="form-label">Tipo de Ensaio (podem ser vários)</div>
-                  <div id="ensaio-tipos" class="grid-2" aria-label="Seleção de tipos de ensaio">
-                    <label><input type="checkbox" name="ensaioTipo" value="Regional"> Regional</label>
-                    <label><input type="checkbox" name="ensaioTipo" value="Local"> Local</label>
-                    <label><input type="checkbox" name="ensaioTipo" value="Ensaio Geral por Família"> Ensaio Geral por Família</label>
-                    <label><input type="checkbox" name="ensaioTipo" value="Ensaio Geral por Categoria"> Ensaio Geral por Categoria</label>
-                    <label><input type="checkbox" name="ensaioTipo" value="Ensaio DARPE"> Ensaio DARPE</label>
-                    <label><input type="checkbox" name="ensaioTipo" value="Ensaio GEM"> Ensaio GEM</label>
-                  </div>
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="form-label mb-0">Tipo de Ensaio (podem ser vários)</div>
+          <button type="button" id="ensaio-tipos-add" class="btn btn-outline-primary btn-sm" aria-label="Adicionar tipo de ensaio" title="Adicionar tipo de ensaio">+</button>
+        </div>
+        <div id="ensaio-tipos" class="grid-2" aria-label="Seleção de tipos de ensaio">
+          <label><input type="checkbox" name="ensaioTipo" value="Regional"> Regional</label>
+          <label><input type="checkbox" name="ensaioTipo" value="Local"> Local</label>
+          <label><input type="checkbox" name="ensaioTipo" value="Ensaio Geral por Família"> Ensaio Geral por Família</label>
+          <label><input type="checkbox" name="ensaioTipo" value="Ensaio Geral por Categoria"> Ensaio Geral por Categoria</label>
+          <label><input type="checkbox" name="ensaioTipo" value="Ensaio DARPE"> Ensaio DARPE</label>
+          <label><input type="checkbox" name="ensaioTipo" value="Ensaio GEM"> Ensaio GEM</label>
+        </div>
                 </div>
                 <div class="mt-2">
                   <label>

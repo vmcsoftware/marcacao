@@ -972,6 +972,73 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
   const ensTiposWrap = qs('#ensaio-tipos');
   if(ensTiposWrap){ ensTiposWrap.addEventListener('change', renderEnsaioPreview); }
 
+  // Tipos de Ensaio customizados (localStorage)
+  function getCustomEnsaioTypes(){
+    try {
+      const raw = localStorage.getItem('ensaioTiposCustom');
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch { return []; }
+  }
+
+  function setCustomEnsaioTypes(arr){
+    try { localStorage.setItem('ensaioTiposCustom', JSON.stringify(arr)); } catch {}
+  }
+
+  function renderCustomEnsaioTypes(){
+    const wrap = qs('#ensaio-tipos');
+    if(!wrap) return;
+    const existing = new Set(Array.from(wrap.querySelectorAll('input[name="ensaioTipo"]')).map(i=>i.value.trim().toLowerCase()));
+    getCustomEnsaioTypes().forEach(t=>{
+      const v = String(t||'').trim();
+      if(!v) return;
+      const key = v.toLowerCase();
+      if(existing.has(key)) return;
+      const lab = document.createElement('label');
+      const inp = document.createElement('input');
+      inp.type = 'checkbox';
+      inp.name = 'ensaioTipo';
+      inp.value = v;
+      lab.appendChild(inp);
+      lab.appendChild(document.createTextNode(' ' + v));
+      wrap.appendChild(lab);
+      existing.add(key);
+    });
+  }
+
+  function setupEnsaioTipoAdder(){
+    const btn = qs('#ensaio-tipos-add');
+    const wrap = qs('#ensaio-tipos');
+    if(!btn || !wrap) return;
+    btn.addEventListener('click', ()=>{
+      const name = (prompt('Nome do novo tipo de ensaio:')||'').trim();
+      if(!name) return;
+      const normalized = name.toLowerCase();
+      const existing = new Set(Array.from(wrap.querySelectorAll('input[name="ensaioTipo"]')).map(i=>i.value.trim().toLowerCase()));
+      if(existing.has(normalized)){
+        if(typeof toast==='function') toast('Tipo de ensaio já existe', 'warning');
+        return;
+      }
+      const lab = document.createElement('label');
+      const inp = document.createElement('input');
+      inp.type = 'checkbox';
+      inp.name = 'ensaioTipo';
+      inp.value = name;
+      lab.appendChild(inp);
+      lab.appendChild(document.createTextNode(' ' + name));
+      wrap.appendChild(lab);
+
+      const current = getCustomEnsaioTypes();
+      const updated = Array.from(new Set([...current, name].map(t=>String(t||'').trim()).filter(Boolean)));
+      setCustomEnsaioTypes(updated);
+      if(typeof toast==='function') toast('Tipo de ensaio adicionado', 'success');
+      if(typeof renderEnsaioPreview==='function') renderEnsaioPreview();
+    });
+  }
+
+  renderCustomEnsaioTypes();
+  setupEnsaioTipoAdder();
+
   // UI repeatable de vínculos de Ministério (Ancião/Diácono)
   const anciaosWrapper = qs('#anciaos-wrapper');
   const addAnciaoBtn = qs('#add-anciao');
