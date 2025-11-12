@@ -6,27 +6,34 @@
   <title>Agenda - Calendário Mensal</title>
   <style>
     :root {
+      --bg-start: #f8fafc;
+      --bg-end: #eef2f7;
+      --accent: #6366f1; /* indigo */
+      --accent-2: #06b6d4; /* cyan */
+      --accent-grad: linear-gradient(135deg, var(--accent), var(--accent-2));
       --cal-border: #e5e7eb;
       --cal-muted: #9ca3af;
       --cal-today: #2563eb;
-      --cal-today-bg: #eff6ff;
-      --cal-event-bg: #f8fafc;
-      --cal-event-pill: #374151;
-      --cal-event-pill-bg: #eef2f7;
+      --cal-today-bg: #eef2ff;
+      --cal-event-bg: #f9fbff;
+      --cal-event-pill: #ffffff;
+      --cal-event-pill-bg: var(--accent-grad);
       --cal-selected-outline: #93c5fd;
       --cal-selected-bg: #f0f9ff;
     }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; margin: 0; }
-    header { border-bottom: 1px solid var(--cal-border); padding: 12px 16px; display: flex; align-items: center; gap: 12px; justify-content: space-between; }
-    .nav { display: flex; gap: 12px; align-items: center; }
-    .nav a { color: #111827; text-decoration: none; font-weight: 500; }
-    .container { max-width: 1100px; margin: 16px auto; padding: 0 16px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; margin: 0; background: linear-gradient(135deg, var(--bg-start), var(--bg-end)); color: #0f172a; }
+    header { border-bottom: 1px solid rgba(99,102,241,0.2); padding: 16px; display: flex; align-items: center; gap: 12px; justify-content: space-between; backdrop-filter: saturate(150%) blur(6px); }
+    .nav { display: flex; gap: 8px; align-items: center; }
+    .nav a.tab { color: #1f2937; text-decoration: none; font-weight: 600; border: 1px solid transparent; border-radius: 999px; padding: 8px 12px; transition: all .15s ease; }
+    .nav a.tab:hover { border-color: rgba(99,102,241,0.35); }
+    .nav a.tab.active { color: #ffffff; background: var(--accent-grad); box-shadow: 0 6px 18px rgba(99,102,241,0.25); }
+    .container { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
     .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
-    .month-label { font-size: 18px; font-weight: 600; color: #111827; }
-    .btn { appearance: none; border: 1px solid var(--cal-border); background: white; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-weight: 500; color: #111827; }
-    .btn:hover { background: #f9fafb; }
+    .month-label { font-size: 20px; font-weight: 700; color: #0f172a; }
+    .btn { appearance: none; border: 1px solid rgba(99,102,241,0.35); background: #ffffff; border-radius: 10px; padding: 6px 10px; cursor: pointer; font-weight: 600; color: #0f172a; transition: all .15s ease; }
+    .btn:hover { background: #f0f9ff; border-color: rgba(6,182,212,0.45); }
 
-    .calendar { border: 1px solid var(--cal-border); border-radius: 12px; overflow: hidden; background: white; }
+    .calendar { border: 1px solid rgba(99,102,241,0.25); border-radius: 16px; overflow: hidden; background: rgba(255,255,255,0.85); backdrop-filter: saturate(140%) blur(8px); box-shadow: 0 8px 24px rgba(15,23,42,0.08); }
     .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); font-size: 12px; color: var(--cal-muted); }
     .cal-weekdays div { padding: 10px; text-align: center; font-weight: 600; }
     .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--cal-border); }
@@ -34,22 +41,25 @@
     .cal-cell:nth-child(7n+1) { border-left: none; }
     .cal-cell:hover { background: #f9fafb; }
     .cal-cell.selected { outline: 2px solid var(--cal-selected-outline); outline-offset: -2px; background: var(--cal-selected-bg); }
-    .cal-day { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #111827; }
+    .cal-day { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #0f172a; }
     .cal-day .muted { color: var(--cal-muted); }
-    .cal-day .today { color: var(--cal-today); background: var(--cal-today-bg); border-radius: 999px; padding: 2px 6px; font-weight: 700; }
+    .cal-day .today { color: var(--cal-today); background: var(--cal-today-bg); border-radius: 999px; padding: 2px 6px; font-weight: 700; box-shadow: 0 0 0 2px rgba(37,99,235,0.15) inset; }
 
-    .event { background: var(--cal-event-bg); border-radius: 8px; padding: 4px; font-size: 12px; line-height: 1.2; display: flex; flex-direction: column; gap: 2px; }
+    .event { background: var(--cal-event-bg); border-radius: 10px; padding: 6px; font-size: 12px; line-height: 1.2; display: flex; flex-direction: column; gap: 4px; border: 1px solid rgba(6,182,212,0.2); }
     .event .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .event .meta { color: #374151; }
-    .pill { display: inline-flex; align-items: center; gap: 6px; background: var(--cal-event-pill-bg); color: var(--cal-event-pill); border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+    .event .meta { color: #334155; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; background: var(--cal-event-pill-bg); color: var(--cal-event-pill); border-radius: 999px; padding: 2px 10px; font-size: 11px; font-weight: 700; box-shadow: 0 6px 16px rgba(6,182,212,0.25); }
+    .more-toggle { border-style: dashed; cursor: pointer; }
+    .more-toggle .meta { color: #0f172a; }
+    .more-toggle:hover { background: #f0f9ff; }
 
     .summary-tabs { display: flex; gap: 6px; align-items: center; }
-    .summary-tab-btn.active { background: #f0f9ff; border-color: var(--cal-selected-outline); }
+    .summary-tab-btn.active { background: var(--accent-grad); border-color: transparent; color: #ffffff; box-shadow: 0 6px 18px rgba(99,102,241,0.25); }
     .summary-tab-content { display: none; }
     .summary-tab-content.active { display: block; }
     .list li { padding: 4px 0; }
     .list .title { display: inline-block; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
+  
     @media (max-width: 720px) {
       .cal-cell { min-height: 100px; }
       .event { font-size: 11px; }
@@ -63,12 +73,6 @@
 <body>
   <header class="app-header bg-white shadow-sm">
     <div class="container header-content">
-      <div class="brand">
-        <div>
-          <h1>Administração CCB Ituiutaba</h1>
-          <p>Agenda Mensal</p>
-        </div>
-      </div>
       <nav class="tabs nav nav-tabs" role="tablist">
         <a class="nav-link tab" href="index.html" id="tab-btn-eventos">Atendimento</a>
         <a class="nav-link tab" href="ministerio.html" id="tab-btn-ministerio">Ministério</a>

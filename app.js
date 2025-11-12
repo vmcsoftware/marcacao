@@ -2765,6 +2765,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
     let agenda2026Cal = [];
     let congregacoesReady = false;
     let selectedYmd = null;
+    const expandedDays = new Set();
 
     function monthLabel(d) {
       const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -2841,6 +2842,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         const isToday = sameYmd(d, today);
         const key = yyyyMmDd(d);
         const dayEvents = byDay.get(key) || [];
+        const isExpanded = expandedDays.has(key);
 
         const selectedClass = (selectedYmd && selectedYmd === key) ? ' selected' : '';
         html += `<div class="cal-cell${selectedClass}" data-ymd="${key}">`;
@@ -2853,13 +2855,17 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         html += '</div>';
 
         if (dayEvents.length) {
-          for (const evt of dayEvents.slice(0, 4)) {
+          for (const evt of dayEvents.slice(0, isExpanded ? dayEvents.length : 4)) {
             const hora = evt.hora ? `<span class="meta">${evt.hora}</span>` : '';
             const tipo = `<span class="pill">${evt.tipo}</span>`;
             html += `<div class="event">${tipo}<span class="title">${evt.titulo}</span>${hora}</div>`;
           }
           if (dayEvents.length > 4) {
-            html += `<div class="event"><span class="meta">+${dayEvents.length-4} mais…</span></div>`;
+            if(!isExpanded){
+              html += `<button class="event more-toggle" data-ymd="${key}" data-expanded="false"><span class="meta">Mostrar todos (+${dayEvents.length-4})</span></button>`;
+            }else{
+              html += `<button class="event more-toggle" data-ymd="${key}" data-expanded="true"><span class="meta">Mostrar menos</span></button>`;
+            }
           }
         }
 
@@ -2994,6 +3000,14 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
 
     if(agendaMonthGrid){
       agendaMonthGrid.addEventListener('click', (e)=>{
+        const toggle = e.target.closest('.more-toggle');
+        if(toggle && toggle.dataset && toggle.dataset.ymd){
+          const ymd = toggle.dataset.ymd;
+          const isExp = toggle.dataset.expanded === 'true';
+          if(isExp) expandedDays.delete(ymd); else expandedDays.add(ymd);
+          renderCalendar();
+          return;
+        }
         const cell = e.target.closest('.cal-cell');
         if(!cell || !cell.dataset || !cell.dataset.ymd) return;
         selectedYmd = cell.dataset.ymd;
@@ -3529,6 +3543,11 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
 
       const headerContent = document.querySelector('.app-header .header-content');
       if(headerContent){
+        const isAgenda = (location && location.pathname && /(^|\/)agenda\.html$/.test(location.pathname));
+        if(isAgenda){
+          // Não renderiza controle/ícone de tema na aba Agenda
+          return;
+        }
         const wrap = document.createElement('div');
         wrap.className = 'theme-control';
 
