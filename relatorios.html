@@ -28,6 +28,12 @@
         </span>
         Reforço de Coletas
       </a>
+      <a class="nav-link tab" href="atendimentos.html" id="tab-btn-atendimentos">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 3h18v4H3zM3 9h18v12H3z" fill="currentColor"/></svg>
+        </span>
+        Marcação de Atendimentos
+      </a>
       <a class="nav-link tab" href="ministerio.html" id="tab-btn-ministerio">
         <span class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.33 0-8 2.17-8 5v1h16v-1c0-2.83-3.67-5-8-5z" fill="currentColor"/></svg>
@@ -83,13 +89,22 @@
             <select id="rel-cidade" class="form-select form-select-sm"></select>
           </div>
           <div class="col-12 col-md-auto">
+            <label for="rel-bairro" class="form-label">Bairro</label>
+            <select id="rel-bairro" class="form-select form-select-sm"></select>
+          </div>
+          <div class="col-12 col-md-auto">
             <label for="rel-tipo" class="form-label">Tipo</label>
             <select id="rel-tipo" class="form-select form-select-sm"></select>
           </div>
-          <div class="col-12 col-md-auto ms-md-auto">
+          <div class="col-12 col-md-auto ms-md-auto d-flex align-items-end gap-2">
+            <div class="form-check me-2">
+              <input class="form-check-input" type="checkbox" id="rel-auto-apply" />
+              <label class="form-check-label" for="rel-auto-apply">Auto-aplicar</label>
+            </div>
             <button id="rel-apply" class="btn btn-primary btn-sm">Aplicar</button>
             <button id="rel-clear" class="btn btn-outline-secondary btn-sm">Limpar</button>
             <button id="rel-backfill-cidade" class="btn btn-outline-danger btn-sm" title="Atualiza o campo cidade nos eventos antigos">Backfill Cidade</button>
+            <span id="rel-loading" class="spinner-border spinner-border-sm text-primary d-none" role="status" aria-hidden="true"></span>
           </div>
         </div>
         <div class="section-help mt-1">Dica: ajuste os filtros para refinar os relatórios e use “Gerar Calendário” para imprimir o mês selecionado. Botão "Backfill Cidade" disponível apenas para administradores.</div>
@@ -97,8 +112,10 @@
       <div class="reports-grid">
         <div class="report">
           <h3>Resumo de Atendimentos</h3>
-          <div class="mb-2">
+          <div class="mb-2 d-flex flex-wrap gap-2">
             <button id="rel-eventos-calendar" class="btn btn-outline-primary btn-sm">Gerar Calendário</button>
+            <button id="rel-print-pdf" class="btn btn-outline-primary btn-sm">Imprimir/PDF</button>
+            <button id="rel-export-xls" class="btn btn-outline-success btn-sm">Exportar XLS</button>
           </div>
           <div class="section-help">Eventos listados conforme os filtros acima (Ano, Mês, Cidade, Tipo).</div>
           <ul id="relatorio-eventos"></ul>
@@ -180,10 +197,6 @@
         <div class="report">
           <h3>Ensaios por Congregação</h3>
           <div class="row g-2 align-items-end mb-2">
-            <div class="col-auto">
-              <label for="rel-bairro" class="form-label">Bairro</label>
-              <select id="rel-bairro" class="form-select form-select-sm"></select>
-            </div>
             <div class="col-auto">
               <label for="rel-ensaios-sort" class="form-label">Ordenar</label>
               <select id="rel-ensaios-sort" class="form-select form-select-sm">

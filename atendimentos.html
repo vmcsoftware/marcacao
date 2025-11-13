@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Administração CCB Ituiutaba - Marcação de Atendimentos</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <!-- Firebase SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-light">
+  <header class="app-header bg-white shadow-sm">
+    <div class="container header-content">
+      <div class="brand">
+        <div>
+          <h1>Administração CCB Ituiutaba</h1>
+          <p>Marcação de Atendimentos</p>
+        </div>
+      </div>
+      <nav class="tabs nav nav-tabs" role="tablist">
+        <a class="nav-link tab" href="index.html" id="tab-btn-eventos">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M7 10h10v2H7zm0 4h7v2H7z" fill="currentColor"/><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" fill="currentColor"/></svg>
+          </span>
+          Reforço de Coletas
+        </a>
+        <a class="nav-link tab active" href="atendimentos.html" id="tab-btn-atendimentos" aria-selected="true">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 3h18v4H3zM3 9h18v12H3z" fill="currentColor"/></svg>
+          </span>
+          Marcação de Atendimentos
+        </a>
+        <a class="nav-link tab" href="ministerio.html" id="tab-btn-ministerio">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.33 0-8 2.17-8 5v1h16v-1c0-2.83-3.67-5-8-5z" fill="currentColor"/></svg>
+          </span>
+          Ministério
+        </a>
+        <a class="nav-link tab" href="congregacoes.html" id="tab-btn-congregacoes">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3l9 7-1.5 2L12 7 4.5 12 3 10z" fill="currentColor"/><path d="M5 13v7h5v-4h4v4h5v-7l-7-5z" fill="currentColor"/></svg>
+          </span>
+          Congregações
+        </a>
+        <a class="nav-link tab" href="relatorios.html" id="tab-btn-relatorios">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 13h6v8H3zm12-10h6v18h-6zM9 3h6v18H9z" fill="currentColor"/></svg>
+          </span>
+          Relatórios
+        </a>
+        <a class="nav-link tab" href="dashboard.html" id="tab-btn-dashboard" title="Dashboard">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 13h6v8H3zM10 3h4v18h-4zM15 9h6v12h-6z" fill="currentColor"/></svg>
+          </span>
+          Dashboard
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <section id="config-alert" class="alert hidden" role="alert">
+    As chaves do Firebase não estão configuradas. Abra o arquivo config.js e insira sua configuração do Firebase para habilitar o salvamento em tempo real.
+  </section>
+
+  <main class="content container my-3">
+    <section class="tab-panel active" role="tabpanel" aria-labelledby="Marcação de Atendimentos">
+      <div class="card shadow-sm p-3 mb-3">
+        <div class="grid-2">
+          <div>
+            <h2>Marcar Atendimento</h2>
+            <form id="form-atendimento" class="form-grid">
+              <label>
+                Congregação
+                <select name="congregacaoId" id="atend-congregacao" required>
+                  <option value="">Selecionar...</option>
+                </select>
+              </label>
+              <div class="full">
+                <h4 class="meta">Dias de Cultos da Congregação</h4>
+                <table class="table table-sm" id="atend-cultos">
+                  <thead>
+                    <tr>
+                      <th>Tipo</th>
+                      <th>Dia</th>
+                      <th>Horário</th>
+                    </tr>
+                  </thead>
+                  <tbody id="atend-cultos-body">
+                    <tr>
+                      <td colspan="3" class="text-muted">Selecione uma congregação</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <label>
+                Tipo do Atendimento
+                <select name="tipo" id="atend-tipo" required>
+                  <option value="Batismo">Batismo</option>
+                  <option value="Santa Ceia">Santa-Ceia</option>
+                  <option value="Reuniões para Mocidade">Reuniões para Mocidade</option>
+                  <option value="Ensaio Regional">Ensaio Regional</option>
+                </select>
+              </label>
+              <label id="atend-enc-wrapper" class="hidden">
+                Encarregado Regional
+                <select name="encRegId" id="atend-enc-regional">
+                  <option value="">Selecionar...</option>
+                </select>
+                <div class="form-text mt-1">
+                  <label style="display:inline-flex; align-items:center; gap:6px;">
+                    <input type="checkbox" id="atend-enc-externo" /> Irmão de fora
+                  </label>
+                </div>
+                <input type="text" id="atend-enc-nome" name="encRegNomeManual" class="form-control mt-1 hidden" placeholder="Nome do Encarregado Regional (fora)" />
+              </label>
+              <label>
+                Data
+                <input type="date" name="data" id="atend-data" required />
+              </label>
+              <label>
+                Ancião que atenderá
+                <select name="atendenteId" id="atend-anciao" required>
+                  <option value="">Selecionar (lista de Anciãos)...</option>
+                </select>
+                <div class="form-text mt-1">
+                  <label style="display:inline-flex; align-items:center; gap:6px;">
+                    <input type="checkbox" id="atend-anciao-externo" /> Irmão de fora
+                  </label>
+                </div>
+                <input type="text" id="atend-anciao-nome" name="atendenteNomeManual" class="form-control mt-1 hidden" placeholder="Nome do Ancião (fora)" />
+              </label>
+              <label class="full">
+                Observações
+                <textarea name="observacoes" rows="3" placeholder="Detalhes, observações..."></textarea>
+              </label>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Salvar Atendimento</button>
+                <button type="reset" class="btn btn-outline-secondary">Limpar</button>
+              </div>
+            </form>
+          </div>
+          <div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h4 class="meta mb-0">Atendimentos Cadastrados</h4>
+            </div>
+            <table class="table table-sm" id="tabela-atendimentos">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Hora</th>
+                  <th>Local</th>
+                  <th>Ancião</th>
+                  <th>Tipo</th>
+                </tr>
+              </thead>
+              <tbody id="tabela-atendimentos-body">
+                <tr>
+                  <td colspan="5" class="text-muted">Nenhum atendimento cadastrado</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card shadow-sm p-3 mb-3">
+        <h3>Atendimentos Cadastrados</h3>
+        <div id="lista-atendimentos" class="list"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer text-muted bg-white border-top py-3">
+    <small>© 2025 Administração CCB Ituiutaba • </small>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

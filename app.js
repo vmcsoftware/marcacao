@@ -159,6 +159,20 @@
   const btnImprimirEventos = qs('#btn-imprimir-eventos');
   const btnExportarPdfEventos = qs('#btn-exportar-pdf-eventos');
   const btnExportarXlsEventos = qs('#btn-exportar-xls-eventos');
+  // Atendimentos (nova página)
+  const formAtendimento = qs('#form-atendimento');
+  const atendCongSel = qs('#atend-congregacao');
+  const atendTipoSel = qs('#atend-tipo');
+  const atendAnciaoSel = qs('#atend-anciao');
+  const atendAnciaoExternoChk = qs('#atend-anciao-externo');
+  const atendAnciaoNomeInput = qs('#atend-anciao-nome');
+  const atendEncWrap = qs('#atend-enc-wrapper');
+  const atendEncRegSel = qs('#atend-enc-regional');
+  const atendEncExternoChk = qs('#atend-enc-externo');
+  const atendEncNomeInput = qs('#atend-enc-nome');
+  const atendCultosBody = qs('#atend-cultos-body');
+  const tabelaAtendBody = qs('#tabela-atendimentos-body');
+  const listaAtendimentos = qs('#lista-atendimentos');
   // Filtro de tabela (Index): Ano/Mês
   const indexYearSel = qs('#index-year');
   const indexMonthSel = qs('#index-month');
@@ -173,7 +187,9 @@ const relMonthSel = qs('#rel-month');
 const relCidadeSel = qs('#rel-cidade');
 const relTipoSel = qs('#rel-tipo');
   const btnRelApply = qs('#rel-apply');
-const btnRelClear = qs('#rel-clear');
+  const btnRelClear = qs('#rel-clear');
+  const relAutoApplyChk = qs('#rel-auto-apply');
+  const relLoading = qs('#rel-loading');
 const btnRelPrint = qs('#rel-print');
 const btnRelPdf = qs('#rel-print-pdf');
 const btnRelXls = qs('#rel-export-xls');
@@ -206,6 +222,8 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
   let relEventosFilteredCache = null;
   async function applyRelFiltersFetch(){
     try{
+      if(relLoading){ relLoading.classList.remove('d-none'); }
+      if(btnRelApply){ btnRelApply.disabled = true; }
       if(!db){ if(typeof renderRelatorios==='function') renderRelatorios(); return; }
       const y = relYearSel && relYearSel.value ? parseInt(relYearSel.value,10) : null;
       const m = relMonthSel && relMonthSel.value ? parseInt(relMonthSel.value,10) : null;
@@ -235,8 +253,21 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
         const bd = parseDateYmdLocal(b.data) || new Date(b.data);
         return ad - bd;
       });
+      // Filtro adicional por bairro (cliente) se selecionado
+      const bairroSel = relBairroSel && relBairroSel.value ? String(relBairroSel.value) : '';
+      if(bairroSel){
+        relEventosFilteredCache = (relEventosFilteredCache||[]).filter(ev => {
+          try{
+            const cong = congregacoesByIdEvents && congregacoesByIdEvents[ev.congregacaoId];
+            return (cong && String(cong.bairro||'') === bairroSel);
+          }catch{}
+          return false;
+        });
+      }
     }catch(err){ console.error(err); toast('Falha ao buscar eventos no Firebase', 'error'); relEventosFilteredCache = null; }
     finally{
+      if(relLoading){ relLoading.classList.add('d-none'); }
+      if(btnRelApply){ btnRelApply.disabled = false; }
       try{ if(typeof renderRelatorios==='function') renderRelatorios(); }catch{}
     }
   }
@@ -881,6 +912,20 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       renderEventoCultosPreview(congId);
     });
   }
+  // Popular congregações e cultos na página de Atendimentos
+  if(atendCongSel){
+    readList('congregacoes', list => {
+      congregacoesCacheEvents = list;
+      congregacoesByIdEvents = {};
+      list.forEach(c => { congregacoesByIdEvents[c.id] = c; });
+      fillSelect(atendCongSel, list, 'nomeFormatado');
+      renderAtendCultosPreview(atendCongSel.value||'');
+    });
+    atendCongSel.addEventListener('change', (e)=>{
+      const congId = e.target.value || '';
+      renderAtendCultosPreview(congId);
+    });
+  }
   if(minCongSel){
     readList('congregacoes', list => {
       fillSelect(minCongSel, list, 'nomeFormatado');
@@ -891,6 +936,277 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
   if(resultadoCongSel){
     readList('congregacoes', list => {
       fillSelect(resultadoCongSel, list, 'nomeFormatado');
+    });
+  }
+
+  // Popular Anciãos e Encarregados Regionais na página de Atendimentos
+  if(atendAnciaoSel || atendEncRegSel){
+    readList('ministerio', list => {
+      const anciaos = list.filter(m=>m.funcao==='Ancião').sort((a,b)=> (a.nome||'').localeCompare(b.nome||''));
+      const encRegionais = list.filter(m=>m.funcao==='Encarregado Regional').sort((a,b)=> (a.nome||'').localeCompare(b.nome||''));
+      if(atendAnciaoSel){
+        atendAnciaoSel.innerHTML = '<option value="">Selecionar...</option>' + anciaos.map(m=>`<option value="${m.id}">${m.nome}</option>`).join('');
+      }
+      if(atendEncRegSel){
+        atendEncRegSel.innerHTML = '<option value="">Selecionar...</option>' + encRegionais.map(m=>`<option value="${m.id}">${m.nome}</option>`).join('');
+      }
+    });
+  }
+
+  // Mostrar campo de Encarregado Regional apenas para "Ensaio Regional"
+  if(atendTipoSel && atendEncWrap){
+    const toggleEnc = ()=>{
+      const isEnsaioReg = (atendTipoSel.value||'') === 'Ensaio Regional';
+      atendEncWrap.classList.toggle('hidden', !isEnsaioReg);
+      if(!isEnsaioReg && atendEncRegSel){ atendEncRegSel.value=''; }
+      if(!isEnsaioReg && atendEncExternoChk){ atendEncExternoChk.checked=false; }
+      if(!isEnsaioReg && atendEncNomeInput){ atendEncNomeInput.classList.add('hidden'); atendEncNomeInput.required=false; atendEncNomeInput.value=''; }
+      if(atendEncRegSel){ atendEncRegSel.disabled = !!(atendEncExternoChk && atendEncExternoChk.checked); }
+    };
+    atendTipoSel.addEventListener('change', toggleEnc);
+    toggleEnc();
+  }
+
+  // Toggle "irmão de fora" para Ancião
+  function toggleAnciaoExterno(){
+    const isExt = !!(atendAnciaoExternoChk && atendAnciaoExternoChk.checked);
+    if(atendAnciaoNomeInput){ atendAnciaoNomeInput.classList.toggle('hidden', !isExt); atendAnciaoNomeInput.required = isExt; if(!isExt) atendAnciaoNomeInput.value=''; }
+    if(atendAnciaoSel){ atendAnciaoSel.disabled = isExt; if(isExt) atendAnciaoSel.value=''; }
+  }
+  atendAnciaoExternoChk && atendAnciaoExternoChk.addEventListener('change', toggleAnciaoExterno);
+  toggleAnciaoExterno();
+
+  // Toggle "irmão de fora" para Encarregado Regional
+  function toggleEncRegExterno(){
+    const isExt = !!(atendEncExternoChk && atendEncExternoChk.checked);
+    if(atendEncNomeInput){ atendEncNomeInput.classList.toggle('hidden', !isExt); atendEncNomeInput.required = isExt; if(!isExt) atendEncNomeInput.value=''; }
+    if(atendEncRegSel){ atendEncRegSel.disabled = isExt; if(isExt) atendEncRegSel.value=''; }
+  }
+  atendEncExternoChk && atendEncExternoChk.addEventListener('change', toggleEncRegExterno);
+  toggleEncRegExterno();
+
+  // Render cultos para a página de Atendimentos (lista completa da congregação)
+  function renderAtendCultosPreview(congId){
+    if(!atendCultosBody){ return; }
+    if(!congId){
+      atendCultosBody.innerHTML = '<tr><td colspan="3" class="text-muted">Selecione uma congregação</td></tr>';
+      return;
+    }
+    const cong = congregacoesByIdEvents[congId];
+    const cultos = (cong && Array.isArray(cong.cultos)) ? cong.cultos : [];
+    if(!cultos.length){
+      atendCultosBody.innerHTML = '<tr><td colspan="3" class="text-muted">Nenhum culto cadastrado para esta congregação</td></tr>';
+      return;
+    }
+    atendCultosBody.innerHTML = cultos.map(ct => {
+      return `<tr>
+        <td>${ct.tipo}</td>
+        <td>${ct.dia}</td>
+        <td>${ct.horario||'-'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Submissão do formulário de Atendimentos
+  if(formAtendimento){
+    formAtendimento.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const fd = new FormData(formAtendimento);
+      const data = Object.fromEntries(fd.entries());
+      const tipoSel = (data.tipo||'').trim();
+      const congId = (data.congregacaoId||'').trim();
+      const dt = (data.data||'').trim();
+      const anciaoId = (data.atendenteId||'').trim();
+      const anciaoExtNome = (data.atendenteNomeManual||'').trim();
+      const anciaoIsExt = !!(atendAnciaoExternoChk && atendAnciaoExternoChk.checked);
+      if(!tipoSel || !congId || !dt || (!anciaoIsExt && !anciaoId) || (anciaoIsExt && !anciaoExtNome)){
+        toast('Preencha tipo, data, ancião e congregação', 'error'); return;
+      }
+      // Denormalizar nomes
+      let congregacaoNome = '';
+      try{
+        const opt = atendCongSel && atendCongSel.selectedOptions && atendCongSel.selectedOptions[0];
+        congregacaoNome = opt ? opt.textContent : '';
+      }catch{}
+      const cidadeEvento = (congregacoesByIdEvents && congregacoesByIdEvents[congId] && congregacoesByIdEvents[congId].cidade) ? (congregacoesByIdEvents[congId].cidade||'') : '';
+      let anciaoNome = '';
+      if(anciaoIsExt){
+        anciaoNome = anciaoExtNome;
+      } else if(atendAnciaoSel){
+        const opt = atendAnciaoSel.querySelector(`option[value="${anciaoId}"]`);
+        anciaoNome = opt ? opt.textContent : '';
+      }
+      let encRegId = '';
+      let encRegNome = '';
+      if(atendEncRegSel && !atendEncWrap.classList.contains('hidden')){
+        const encIsExt = !!(atendEncExternoChk && atendEncExternoChk.checked);
+        if(encIsExt){
+          encRegId = '';
+          encRegNome = (data.encRegNomeManual||'').trim();
+          if(!encRegNome){ toast('Informe o nome do Encarregado Regional (fora)', 'error'); return; }
+        } else {
+          encRegId = atendEncRegSel.value||'';
+          if(encRegId){
+            const opt = atendEncRegSel.querySelector(`option[value="${encRegId}"]`);
+            encRegNome = opt ? opt.textContent : '';
+          }
+        }
+      }
+      // Mapear Ensaio Regional para tipo/ensaioTipo
+      const saveTipo = tipoSel === 'Ensaio Regional' ? 'Ensaio' : tipoSel;
+      const ensaioTipo = tipoSel === 'Ensaio Regional' ? 'Regional' : '';
+      try{
+        const saved = await write('eventos', {
+          tipo: saveTipo,
+          ensaioTipo,
+          data: dt,
+          congregacaoId: congId,
+          congregacaoNome,
+          cidade: cidadeEvento,
+          atendenteId: anciaoIsExt ? '' : anciaoId,
+          atendenteNome: anciaoNome,
+          atendenteExterno: !!anciaoIsExt,
+          encRegId,
+          encRegNome,
+          encRegExterno: !!(atendEncExternoChk && atendEncExternoChk.checked),
+          observacoes: data.observacoes||''
+        });
+        if(saved){ toast('Atendimento salvo'); formAtendimento.reset(); if(atendEncWrap) atendEncWrap.classList.add('hidden'); }
+      }catch(err){ console.error(err); const msg = (err && (err.code||err.message)) || 'Falha ao salvar atendimento'; toast(msg, 'error'); }
+    });
+  }
+
+  // Listagem dos atendimentos (apenas tipos desta página)
+  if(tabelaAtendBody || listaAtendimentos){
+    readList('eventos', list => {
+      eventosCache = list;
+      const tiposAceitos = ['Batismo','Batismos','Santa Ceia','Reuniões para Mocidade','Ensaio'];
+      const filtrados = (list||[]).filter(ev => {
+        if(ev.tipo === 'Ensaio'){ return ev.ensaioTipo === 'Regional'; }
+        return tiposAceitos.includes(ev.tipo);
+      }).sort((a,b)=>{
+        const ad = parseDateYmdLocal(a.data) || new Date(a.data);
+        const bd = parseDateYmdLocal(b.data) || new Date(b.data);
+        return ad - bd;
+      });
+      if(tabelaAtendBody){
+        const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+        const rowsHtml = filtrados.map(ev => {
+          const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+          const diaNome = diasSemanaPt[d.getDay()];
+          const cong = congregacoesByIdEvents[ev.congregacaoId];
+          const localLabel = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
+          let hora = '-';
+          if(cong && Array.isArray(cong.cultos)){
+            const tipoCulto = ''; // não vincula automaticamente horário por tipo
+            // Exibe primeiro culto do dia correspondente se existir
+            const match = cong.cultos.find(ct => ct.dia===diaNome);
+            if(match && match.horario) hora = match.horario;
+          }
+          const atendente = (ev.atendenteNome||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          let tipoLabel = ev.tipo==='Ensaio' && ev.ensaioTipo==='Regional' ? 'Ensaio Regional' : ev.tipo;
+          if(tipoLabel==='Santa Ceia') tipoLabel = 'Santa-Ceia';
+          if(tipoLabel==='Batismos' || tipoLabel==='Batismo') tipoLabel = 'Batismo';
+          return `<tr>
+            <td>${diaNome} - ${formatDate(ev.data)}</td>
+            <td>${hora}</td>
+            <td>${localLabel}</td>
+            <td>${atendente}</td>
+            <td>${tipoLabel}</td>
+          </tr>`;
+        }).join('');
+        tabelaAtendBody.innerHTML = rowsHtml || '<tr><td colspan="5" class="text-muted">Nenhum atendimento cadastrado</td></tr>';
+      }
+      if(listaAtendimentos){
+        const items = filtrados.map(ev => {
+          const cong = congregacoesByIdEvents[ev.congregacaoId];
+          const localLabel = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
+          let tipoLabel = ev.tipo==='Ensaio' && ev.ensaioTipo==='Regional' ? 'Ensaio Regional' : ev.tipo;
+          if(tipoLabel==='Santa Ceia') tipoLabel = 'Santa-Ceia';
+          if(tipoLabel==='Batismos' || tipoLabel==='Batismo') tipoLabel = 'Batismo';
+          return `
+            <div class="item">
+              <div>
+                <strong>${formatDate(ev.data)}</strong>
+                <div class="meta">Local: ${localLabel}</div>
+                <div class="meta">Ancião: ${ev.atendenteNome||'-'}</div>
+                ${ev.encRegNome ? `<div class="meta">Encarregado Regional: ${ev.encRegNome}</div>` : ''}
+                <div class="meta">Tipo: ${tipoLabel}</div>
+              </div>
+              <div>
+                <button class="btn btn-sm btn-outline-secondary" data-action="edit-atend" data-id="${ev.id}">Editar</button>
+                <button class="btn btn-sm btn-outline-danger" data-action="delete-atend" data-id="${ev.id}">Excluir</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        listaAtendimentos.innerHTML = items || '';
+      }
+    });
+    // Ações de editar/excluir
+    listaAtendimentos && listaAtendimentos.addEventListener('click', async (e)=>{
+      const btn = e.target.closest('button[data-action]');
+      if(!btn) return;
+      const id = btn.getAttribute('data-id');
+      const action = btn.getAttribute('data-action');
+      if(action==='delete-atend'){
+        try{ const ok = await remove('eventos', id); if(ok){ toast('Atendimento excluído'); } }catch(err){ console.error(err); toast('Falha ao excluir', 'error'); }
+      } else if(action==='edit-atend'){
+        const ev = (eventosCache||[]).find(x=>x.id===id);
+        if(!ev || !formAtendimento) return;
+        try{
+          atendCongSel && (atendCongSel.value = ev.congregacaoId||'');
+          renderAtendCultosPreview(ev.congregacaoId||'');
+          let tipoLabel = ev.tipo==='Ensaio' && ev.ensaioTipo==='Regional' ? 'Ensaio Regional' : ev.tipo;
+          if(tipoLabel==='Batismos') tipoLabel = 'Batismo';
+          atendTipoSel && (atendTipoSel.value = tipoLabel||'');
+          if(tipoLabel==='Ensaio Regional' && atendEncWrap){
+            atendEncWrap.classList.remove('hidden');
+            const encIsExt = !ev.encRegId && !!ev.encRegNome;
+            if(atendEncExternoChk) atendEncExternoChk.checked = encIsExt;
+            toggleEncRegExterno();
+            if(encIsExt){
+              atendEncNomeInput && (atendEncNomeInput.value = ev.encRegNome||'');
+            } else {
+              atendEncRegSel && (atendEncRegSel.value = ev.encRegId||'');
+            }
+          } else {
+            atendEncWrap && atendEncWrap.classList.add('hidden');
+          }
+          const dtStr = ev.data||'';
+          const inp = qs('#atend-data');
+          inp && (inp.value = dtStr);
+          const anciaoIsExt = !ev.atendenteId && !!ev.atendenteNome;
+          if(atendAnciaoExternoChk) atendAnciaoExternoChk.checked = anciaoIsExt;
+          toggleAnciaoExterno();
+          if(anciaoIsExt){
+            atendAnciaoNomeInput && (atendAnciaoNomeInput.value = ev.atendenteNome||'');
+          } else {
+            atendAnciaoSel && (atendAnciaoSel.value = ev.atendenteId||'');
+          }
+          const submitBtn = formAtendimento.querySelector('button[type="submit"]');
+          const resetBtn = formAtendimento.querySelector('button[type="reset"]');
+          formAtendimento.dataset.editId = ev.id;
+          if(submitBtn) submitBtn.textContent = 'Atualizar Atendimento';
+          if(resetBtn) resetBtn.textContent = 'Cancelar';
+        }catch{}
+      }
+    });
+  }
+
+  // Reset do formulário de Atendimentos
+  if(formAtendimento){
+    formAtendimento.addEventListener('reset', ()=>{
+      delete formAtendimento.dataset.editId;
+      const submitBtn = formAtendimento.querySelector('button[type="submit"]');
+      const resetBtn = formAtendimento.querySelector('button[type="reset"]');
+      if(submitBtn) submitBtn.textContent = 'Salvar Atendimento';
+      if(resetBtn) resetBtn.textContent = 'Limpar';
+      if(atendEncWrap) atendEncWrap.classList.add('hidden');
+      if(atendAnciaoExternoChk) atendAnciaoExternoChk.checked=false;
+      if(atendEncExternoChk) atendEncExternoChk.checked=false;
+      toggleAnciaoExterno();
+      toggleEncRegExterno();
     });
   }
 
@@ -1537,12 +1853,19 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
     const m = relMonthSel && relMonthSel.value ? parseInt(relMonthSel.value,10) : null;
     const cidade = relCidadeSel && relCidadeSel.value ? relCidadeSel.value : '';
     const tipo = relTipoSel && relTipoSel.value ? relTipoSel.value : '';
+    const bairro = relBairroSel && relBairroSel.value ? String(relBairroSel.value) : '';
     return all.filter(ev=>{
       const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
       if(y && (!d || d.getFullYear() !== y)) return false;
       if(m && (!d || (d.getMonth()+1) !== m)) return false;
       if(cidade && cidadeDoEventoRel(ev) !== cidade) return false;
       if(tipo && ev.tipo !== tipo) return false;
+      if(bairro){
+        try{
+          const cong = congregacoesByIdEvents && congregacoesByIdEvents[ev.congregacaoId];
+          if(!cong || String(cong.bairro||'') !== bairro) return false;
+        }catch{ return false; }
+      }
       return true;
     }).sort((a,b)=>{
       const ad = parseDateYmdLocal(a.data) || new Date(a.data);
@@ -1875,6 +2198,14 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       }catch(err){ console.error(err); toast('Falha ao exportar em PDF', 'error'); }
     });
   }
+
+  // Auto-aplicar filtros: quando ativo, dispara busca ao mudar filtros
+  (function(){
+    const onFilterChange = ()=>{
+      if(relAutoApplyChk && relAutoApplyChk.checked){ applyRelFiltersFetch(); }
+    };
+    [relYearSel, relMonthSel, relCidadeSel, relTipoSel, relBairroSel].forEach(el=>{ if(el) el.addEventListener('change', onFilterChange); });
+  })();
 
   // Exportar Batismos, Santa Ceia e Ensaios Regionais
   (function(){
