@@ -1914,6 +1914,12 @@ ${tableHtml}
   // Importar serviços em Relatórios (CSV/XLS/XLSX)
   (function(){
     if(!btnRelServicoImport || !fileRelServicoImport) return;
+    // Configurar worker do PDF.js se disponível
+    try {
+      if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+    } catch(err) { console.warn('PDF.js não disponível ainda', err); }
     const normalizeYmd = (s) => {
       if(!s) return '';
       const str = String(s).trim();
@@ -1964,6 +1970,87 @@ ${tableHtml}
           return obj;
         });
       }catch(err){ console.error(err); return []; }
+    };
+    const parsePdf = async (file)=>{
+      try{
+        if(typeof pdfjsLib === 'undefined'){ toast('Leitor de PDF não carregado', 'error'); return []; }
+        const buf = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+        const linesAll = [];
+        for(let p=1; p<=pdf.numPages; p++){
+          const page = await pdf.getPage(p);
+          const content = await page.getTextContent();
+          // Agrupar por linha (y) e ordenar por x
+          const rowsMap = new Map();
+          for(const item of content.items){
+            const tx = item.str.trim();
+            if(!tx) continue;
+            const y = Math.round(item.transform[5]);
+            const x = Math.round(item.transform[4]);
+            const key = String(y);
+            if(!rowsMap.has(key)) rowsMap.set(key, []);
+            rowsMap.get(key).push({ x, tx });
+          }
+          const rows = Array.from(rowsMap.entries()).sort((a,b)=> Number(a[0]) - Number(b[0]));
+          for(const [, arr] of rows){
+            arr.sort((a,b)=> a.x - b.x);
+            const line = arr.map(o=> o.tx).join(' ').replace(/\s{2,}/g,' ').trim();
+            if(line) linesAll.push(line);
+          }
+        }
+        // Detectar cabeçalho e extrair linhas de dados por separadores
+        const headerIdx = linesAll.findIndex(l=>{
+          const s = l.toLowerCase();
+          return headersStd.every(h=> s.includes(h.toLowerCase()));
+        });
+        if(headerIdx < 0){
+          // Tentar extrair blocos com campos nominados
+          // Ex.: Data: ..., Hora: ..., Cidade: ...
+          const rows = [];
+          let cur = {};
+          for(const line of linesAll){
+            const lower = line.toLowerCase();
+            const setField = (label, key)=>{
+              const ix = lower.indexOf(label.toLowerCase()+':');
+              if(ix>=0){ const v = line.substring(ix+label.length+1).trim(); cur[key] = v; }
+            };
+            setField('Data','Data');
+            setField('Hora','Hora');
+            setField('Cidade','Cidade');
+            setField('Congregacao','Congregacao');
+            setField('Responsavel','Responsavel');
+            setField('Tipo','Tipo');
+            setField('Descricao','Descricao');
+            // Quando já tem Data e (Cidade ou Tipo), assume fim de bloco
+            if(cur.Data && (cur.Cidade || cur.Tipo)){
+              rows.push({ ...cur });
+              cur = {};
+            }
+          }
+          return rows;
+        }
+        const dataLines = linesAll.slice(headerIdx+1);
+        const rows = [];
+        for(const line of dataLines){
+          // Separadores possíveis: tabulação invisível, ponto e vírgula, ou múltiplos espaços
+          let parts = line.split(/\s{3,}|;|\t/).map(s=> s.trim()).filter(Boolean);
+          if(parts.length < 4){
+            // Fallback: tentar por espaço único (risco de colar)
+            parts = line.split(/\s{2,}/).map(s=> s.trim()).filter(Boolean);
+          }
+          if(parts.length === 0) continue;
+          // Mapear por posição; tentar alinhar ao headersStd
+          const obj = {};
+          const max = Math.min(headersStd.length, parts.length);
+          for(let i=0;i<max;i++) obj[headersStd[i]] = parts[i];
+          // Se sobrou conteúdo, empilhar em Descricao
+          if(parts.length > headersStd.length){
+            obj['Descricao'] = parts.slice(headersStd.length).join(' ');
+          }
+          rows.push(obj);
+        }
+        return rows;
+      }catch(err){ console.error(err); toast('Falha ao ler PDF', 'error'); return []; }
     };
     const importRows = async (kind, rows)=>{
       if(!db){ toast('Firebase não configurado', 'error'); return; }
@@ -2022,6 +2109,7 @@ ${tableHtml}
         let rows = [];
         if(name.endsWith('.csv')) rows = await parseCsv(file);
         else if(name.endsWith('.xls') || name.endsWith('.xlsx')) rows = await parseXlsx(file);
+        else if(name.endsWith('.pdf')) rows = await parsePdf(file);
         else { toast('Formato não suportado. Use CSV/XLS/XLSX.', 'error'); return; }
         if(!rows.length){ toast('Arquivo vazio ou sem dados', 'error'); return; }
         await importRows(kind, rows);
