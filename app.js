@@ -171,7 +171,10 @@
   const atendEncExternoChk = qs('#atend-enc-externo');
   const atendEncNomeInput = qs('#atend-enc-nome');
   const atendCultosBody = qs('#atend-cultos-body');
-  const tabelaAtendBody = qs('#tabela-atendimentos-body');
+const tabelaAtendBatBody = qs('#tabela-atend-batismo-body');
+const tabelaAtendCeiaBody = qs('#tabela-atend-ceia-body');
+const tabelaAtendEnsaioBody = qs('#tabela-atend-ensaio-body');
+const tabelaAtendMocBody = qs('#tabela-atend-mocidade-body');
   const listaAtendimentos = qs('#lista-atendimentos');
   // Filtro de tabela (Index): Ano/Mês
   const indexYearSel = qs('#index-year');
@@ -1079,7 +1082,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
   }
 
   // Listagem dos atendimentos (apenas tipos desta página)
-  if(tabelaAtendBody || listaAtendimentos){
+  if(tabelaAtendBatBody || tabelaAtendCeiaBody || tabelaAtendEnsaioBody || tabelaAtendMocBody || listaAtendimentos){
     readList('eventos', list => {
       eventosCache = list;
       const tiposAceitos = ['Batismo','Batismos','Santa Ceia','Reuniões para Mocidade','Ensaio'];
@@ -1091,27 +1094,68 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         const bd = parseDateYmdLocal(b.data) || new Date(b.data);
         return ad - bd;
       });
-      if(tabelaAtendBody){
-        const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-        const rowsHtml = filtrados.map(ev => {
-          const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
-          const diaNome = diasSemanaPt[d.getDay()];
-          const cong = congregacoesByIdEvents[ev.congregacaoId];
-          const localLabel = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
-          const hora = ev.hora || horaDoEvento(ev) || '-';
-          const atendente = (ev.atendenteNome||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-          let tipoLabel = ev.tipo==='Ensaio' && ev.ensaioTipo==='Regional' ? 'Ensaio Regional' : ev.tipo;
-          if(tipoLabel==='Santa Ceia') tipoLabel = 'Santa-Ceia';
-          if(tipoLabel==='Batismos' || tipoLabel==='Batismo') tipoLabel = 'Batismo';
+      const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+      function rowHtmlBase(ev){
+        const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+        const diaNome = diasSemanaPt[d.getDay()];
+        const cong = congregacoesByIdEvents[ev.congregacaoId];
+        const localLabel = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
+        const hora = ev.hora || horaDoEvento(ev) || '-';
+        const atendente = (ev.atendenteNome||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return { diaNome, hora, localLabel, atendente };
+      }
+      const batismos = filtrados.filter(ev => ev.tipo==='Batismo' || ev.tipo==='Batismos');
+      const ceia = filtrados.filter(ev => ev.tipo==='Santa Ceia');
+      const ensaios = filtrados.filter(ev => ev.tipo==='Ensaio' && ev.ensaioTipo==='Regional');
+      const mocidade = filtrados.filter(ev => ev.tipo==='Reuniões para Mocidade');
+      if(tabelaAtendBatBody){
+        const rows = batismos.map(ev => {
+          const b = rowHtmlBase(ev);
           return `<tr>
-            <td>${diaNome} - ${formatDate(ev.data)}</td>
-            <td>${hora}</td>
-            <td>${localLabel}</td>
-            <td>${atendente}</td>
-            <td>${tipoLabel}</td>
+            <td>${b.diaNome} - ${formatDate(ev.data)}</td>
+            <td>${b.hora}</td>
+            <td>${b.localLabel}</td>
+            <td>${b.atendente}</td>
           </tr>`;
         }).join('');
-        tabelaAtendBody.innerHTML = rowsHtml || '<tr><td colspan="5" class="text-muted">Nenhum atendimento cadastrado</td></tr>';
+        tabelaAtendBatBody.innerHTML = rows || '<tr><td colspan="4" class="text-muted">Sem atendimentos de Batismo</td></tr>';
+      }
+      if(tabelaAtendCeiaBody){
+        const rows = ceia.map(ev => {
+          const b = rowHtmlBase(ev);
+          return `<tr>
+            <td>${b.diaNome} - ${formatDate(ev.data)}</td>
+            <td>${b.hora}</td>
+            <td>${b.localLabel}</td>
+            <td>${b.atendente}</td>
+          </tr>`;
+        }).join('');
+        tabelaAtendCeiaBody.innerHTML = rows || '<tr><td colspan="4" class="text-muted">Sem atendimentos de Santa-Ceia</td></tr>';
+      }
+      if(tabelaAtendEnsaioBody){
+        const rows = ensaios.map(ev => {
+          const b = rowHtmlBase(ev);
+          const enc = (ev.encRegNome||'').replace(/</g,'&lt;').replace(/>/g,'&gt;') || '-';
+          return `<tr>
+            <td>${b.diaNome} - ${formatDate(ev.data)}</td>
+            <td>${b.hora}</td>
+            <td>${b.localLabel}</td>
+            <td>${enc}</td>
+          </tr>`;
+        }).join('');
+        tabelaAtendEnsaioBody.innerHTML = rows || '<tr><td colspan="4" class="text-muted">Sem ensaios regionais</td></tr>';
+      }
+      if(tabelaAtendMocBody){
+        const rows = mocidade.map(ev => {
+          const b = rowHtmlBase(ev);
+          return `<tr>
+            <td>${b.diaNome} - ${formatDate(ev.data)}</td>
+            <td>${b.hora}</td>
+            <td>${b.localLabel}</td>
+            <td>${b.atendente}</td>
+          </tr>`;
+        }).join('');
+        tabelaAtendMocBody.innerHTML = rows || '<tr><td colspan="4" class="text-muted">Sem reuniões para mocidade</td></tr>';
       }
       if(listaAtendimentos){
         const items = filtrados.map(ev => {
