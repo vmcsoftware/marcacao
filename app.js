@@ -191,6 +191,7 @@ const btnRelServicoCsv = qs('#rel-servico-export-csv');
 const btnRelServicoXls = qs('#rel-servico-export-xls');
 const btnRelServicoImport = qs('#rel-servico-import');
 const fileRelServicoImport = qs('#file-rel-servico-import');
+const btnRelServicoImportTest = qs('#rel-servico-import-test');
 
   // Resultados: Santa Ceia e Batismos
   const resultadosForm = qs('#form-resultados');
@@ -2267,6 +2268,19 @@ ${tableHtml}
         if(!relServicoTipoSel || !relServicoTipoSel.value){ toast('Selecione o serviço antes de importar', 'error'); return; }
         fileRelServicoImport && fileRelServicoImport.click();
       }catch(err){ console.error(err); toast('Falha ao iniciar importação', 'error'); }
+    });
+    // Botão de teste: injeta linhas de exemplo e importa direto
+    btnRelServicoImportTest && btnRelServicoImportTest.addEventListener('click', async ()=>{
+      try{
+        const kind = relServicoTipoSel ? relServicoTipoSel.value : '';
+        if(!kind){ toast('Selecione o serviço', 'error'); return; }
+        const rows = [
+          { Data:'2025-03-10', Hora:'19:30', Cidade:'Ituiutaba', Congregacao:'Ituiutaba - Centro', Responsavel:'Irmão João', Tipo:kind, Descricao:'Irmãos: 12 Irmãs: 10 Total: 22' },
+          { Data:'2025-03-24', Hora:'19:30', Cidade:'Ituiutaba', Congregacao:'Ituiutaba - Centro', Responsavel:'Irmão Pedro', Tipo:kind, Descricao:'H: 8 M: 9' },
+          { Data:'2025-04-07', Hora:'19:30', Cidade:'Ituiutaba', Congregacao:'Ituiutaba - Centro', Responsavel:'Irmão Marcos', Tipo:kind, Descricao:'Homens: 10 Mulheres: 11' }
+        ];
+        await importRows(kind, rows);
+      }catch(err){ console.error(err); toast('Falha no teste de importação', 'error'); }
     });
     fileRelServicoImport.addEventListener('change', async (e)=>{
       try{
