@@ -1016,6 +1016,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       const tipoSel = (data.tipo||'').trim();
       const congId = (data.congregacaoId||'').trim();
       const dt = (data.data||'').trim();
+      const horaSel = (data.hora||'').trim();
       const anciaoId = (data.atendenteId||'').trim();
       const anciaoExtNome = (data.atendenteNomeManual||'').trim();
       const anciaoIsExt = !!(atendAnciaoExternoChk && atendAnciaoExternoChk.checked);
@@ -1060,6 +1061,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           tipo: saveTipo,
           ensaioTipo,
           data: dt,
+          hora: horaSel || '',
           congregacaoId: congId,
           congregacaoNome,
           cidade: cidadeEvento,
@@ -1096,13 +1098,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           const diaNome = diasSemanaPt[d.getDay()];
           const cong = congregacoesByIdEvents[ev.congregacaoId];
           const localLabel = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
-          let hora = '-';
-          if(cong && Array.isArray(cong.cultos)){
-            const tipoCulto = ''; // não vincula automaticamente horário por tipo
-            // Exibe primeiro culto do dia correspondente se existir
-            const match = cong.cultos.find(ct => ct.dia===diaNome);
-            if(match && match.horario) hora = match.horario;
-          }
+          const hora = ev.hora || horaDoEvento(ev) || '-';
           const atendente = (ev.atendenteNome||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;');
           let tipoLabel = ev.tipo==='Ensaio' && ev.ensaioTipo==='Regional' ? 'Ensaio Regional' : ev.tipo;
           if(tipoLabel==='Santa Ceia') tipoLabel = 'Santa-Ceia';
@@ -1176,6 +1172,8 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           const dtStr = ev.data||'';
           const inp = qs('#atend-data');
           inp && (inp.value = dtStr);
+          const horaInp = qs('#atend-hora');
+          horaInp && (horaInp.value = ev.hora||'');
           const anciaoIsExt = !ev.atendenteId && !!ev.atendenteNome;
           if(atendAnciaoExternoChk) atendAnciaoExternoChk.checked = anciaoIsExt;
           toggleAnciaoExterno();
