@@ -481,23 +481,27 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
   // Inicializar selects de Ano/Mês na Index
   (function initIndexMonthYear(){
     try{
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth()+1; // 1-12
+      const selectedMonth = currentMonth === 12 ? 1 : (currentMonth + 1); // mês subsequente
+      const selectedYear = currentMonth === 12 ? (currentYear + 1) : currentYear; // ajusta ano se dezembro
+
       if(indexYearSel){
-        const now = new Date();
-        const currentYear = now.getFullYear();
         const years = [currentYear-1, currentYear, currentYear+1];
-        indexYearSel.innerHTML = years.map(y=>`<option value="${y}" ${y===currentYear?'selected':''}>${y}</option>`).join('');
+        indexYearSel.innerHTML = years.map(y=>`<option value="${y}" ${y===selectedYear?'selected':''}>${y}</option>`).join('');
         indexYearSel.addEventListener('change', ()=>{ try{ renderTabelaReforcos(); }catch{} });
       }
       if(indexMonthSel){
         const months = ['Todos','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-        const now = new Date();
-        const m = now.getMonth()+1;
         indexMonthSel.innerHTML = months.map((label, i)=>{
           if(i===0) return `<option value="">${label}</option>`; // Todos
-          return `<option value="${i}" ${i===m?'selected':''}>${label}</option>`;
+          return `<option value="${i}" ${i===selectedMonth?'selected':''}>${label}</option>`;
         }).join('');
         indexMonthSel.addEventListener('change', ()=>{ try{ renderTabelaReforcos(); }catch{} });
       }
+      // Re-render com filtro padrão do mês subsequente
+      try{ renderTabelaReforcos(); }catch{}
     }catch{}
   }());
   if(listaEventos){
