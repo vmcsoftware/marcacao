@@ -420,40 +420,78 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
     });
     formEvento.addEventListener('reset', ()=>{ toggleAtendenteManual(false); });
 
-    readList('eventos', list => {
+  readList('eventos', list => {
       eventosCache = list;
       if(relEventosEl || btnRelPrint || relYearSel || relCidadeSel || relTipoSel){
         try{ if(typeof initRelatoriosFilters==='function') initRelatoriosFilters(); }catch{}
         try{ if(typeof renderRelatorios==='function') renderRelatorios(); }catch{}
       }
       if(!listaEventos) return;
-      const sorted = [...list].sort((a,b)=>{
-        const ad = parseDateYmdLocal(a.data) || new Date(a.data);
-        const bd = parseDateYmdLocal(b.data) || new Date(b.data);
-        return ad - bd; // crescente: mais próximo primeiro
+      // Agrupar por congregação e renderizar somente os nomes
+      const byCong = {};
+      (list||[]).forEach(ev => {
+        if(!ev || !ev.congregacaoId) return;
+        (byCong[ev.congregacaoId] = byCong[ev.congregacaoId] || []).push(ev);
       });
-      listaEventos.innerHTML = sorted.map(ev => {
-        const congObj = congregacoesByIdEvents[ev.congregacaoId];
-        const congLabel = ev.congregacaoNome || (congObj ? (congObj.nomeFormatado || (congObj.cidade && congObj.bairro ? `${congObj.cidade} - ${congObj.bairro}` : (congObj.nome||ev.congregacaoId))) : ev.congregacaoId);
-        return `
-        <div class="item">
-          <div>
-            <strong>${ev.tipo}${ev.ensaioTipo?` - ${ev.ensaioTipo}`:''}</strong>
-            <div class="meta">Data: ${formatDate(ev.data)}</div>
-            <div class="meta">Congregação: <span class="congregacao-highlight">${congLabel}</span></div>
-            <div class="meta">Atendido por: ${ev.atendenteNome||'-'}</div>
-            ${ev.observacoes?`<div class="meta">Obs: ${ev.observacoes}</div>`:''}
+      const items = Object.keys(byCong).map(congId => {
+        const arr = byCong[congId] || [];
+        // Label da congregação
+        const sample = arr[0];
+        const congLabel = labelCong(sample || { congregacaoId: congId, congregacaoNome: '' });
+        return { congId, congLabel, events: arr };
+      }).sort((a,b)=> a.congLabel.localeCompare(b.congLabel));
+      if(!items.length){
+        listaEventos.innerHTML = '<div class="list-item"><div class="list-item-info"><span class="text-muted">Nenhum atendimento cadastrado</span></div></div>';
+      } else {
+        listaEventos.innerHTML = items.map(item => {
+          return `
+          <div class="list-item" data-congid="${item.congId}">
+            <div class="list-item-info">
+              <button class="congregacao-link" data-congid="${item.congId}" style="background:none;border:none;padding:0;font-size:1.05rem;color:var(--primary-color);font-weight:600;cursor:pointer;">${item.congLabel}</button>
+              <div class="list-details hidden" aria-live="polite"></div>
+            </div>
           </div>
-          <div>
-            <button class="btn btn-sm btn-outline-secondary" data-action="edit-ev" data-id="${ev.id}">Editar</button>
-            <button class="btn btn-sm btn-outline-danger" data-action="delete-ev" data-id="${ev.id}">Excluir</button>
-          </div>
-        </div>
-      `}).join('');
+          `;
+        }).join('');
+      }
       renderTabelaReforcos();
     });
   if(listaEventos){
     listaEventos.addEventListener('click', async (e)=>{
+        const congBtn = e.target.closest('.congregacao-link');
+        if(congBtn){
+          const congId = congBtn.getAttribute('data-congid');
+          const container = congBtn.closest('.list-item');
+          const details = container ? container.querySelector('.list-details') : null;
+          if(!details){ return; }
+          // Encontrar o último agendamento cadastrado (por createdAt) para esta congregação
+          const getTime = (ev) => {
+            try{
+              const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+              return d ? d.getTime() : 0;
+            }catch{ return 0; }
+          };
+          const last = (eventosCache||[])
+            .filter(ev => ev && ev.congregacaoId === congId)
+            .sort((a,b)=> getTime(b) - getTime(a))
+            [0];
+          if(!last){ details.innerHTML = '<div class="meta text-muted">Nenhum agendamento encontrado para esta congregação.</div>'; details.classList.remove('hidden'); return; }
+          // Montar detalhes compactos do último agendamento
+          const tipo = last.tipo + (last.ensaioTipo ? ` - ${last.ensaioTipo}` : '');
+          const dataFmt = formatDate(last.data);
+          const hora = horaDoEvento(last);
+          const atendente = last.atendenteNome || '-';
+          const obs = last.observacoes ? `<div class="meta">Obs: ${last.observacoes}</div>` : '';
+          const html = `
+            <div class="meta">Último agendamento: <strong>${tipo}</strong></div>
+            <div class="meta">Data/Hora: ${dataFmt} ${hora && hora!=='-' ? `às ${hora}` : ''}</div>
+            <div class="meta">Quem atende: ${atendente}</div>
+            ${obs}
+          `;
+          details.innerHTML = html;
+          details.classList.toggle('hidden');
+          return;
+        }
         const btnEdit = e.target.closest('button[data-action="edit-ev"]');
         const btnDel = e.target.closest('button[data-action="delete-ev"]');
         if(btnEdit){

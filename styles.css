@@ -18,6 +18,12 @@
   --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
   --border-radius: .75rem; /* Bordas mais arredondadas */
   --transition-speed: 0.2s;
+  /* Novos tokens para estilo arrojado */
+  --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  --accent-gradient: linear-gradient(135deg, #22c55e 0%, #06b6d4 100%);
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(148, 163, 184, 0.28);
+  --ring-color: rgba(37, 99, 235, 0.25);
 }
 
 /* Tema Escuro */
@@ -88,10 +94,11 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Header (Navegação) */
 .app-header {
-  background-color: var(--white);
+  background: var(--glass-bg);
   padding: 1rem 0;
-  border-bottom: 1px solid var(--border-color);
-  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  border-bottom: 1px solid var(--glass-border);
+  backdrop-filter: saturate(1.15) blur(8px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }
 
 .header-content {
@@ -142,7 +149,7 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
   font-size: 1rem;
   color: var(--text-light);
-  transition: all var(--transition-speed) ease;
+  transition: all var(--transition-speed) ease, transform var(--transition-speed) ease;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -155,17 +162,29 @@ h1, h2, h3, h4, h5, h6 {
 .tabs .tab:hover {
   background-color: #f1f5f9; /* slate-100 */
   color: var(--text-color);
+  transform: translateY(-1px);
 }
 
 .tabs .tab.active {
   color: var(--primary-color);
-  background-color: var(--white);
-  border: 1px solid var(--border-color);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-bottom: 2px solid var(--white); /* Esconde a borda do container */
-  border-top: 2px solid var(--primary-color); /* Destaque superior */
-  font-weight: 600;
-  box-shadow: var(--shadow-sm);
+  font-weight: 700;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  backdrop-filter: saturate(1.1) blur(6px);
   z-index: 1;
+}
+
+.tabs .tab.active::after {
+  content: "";
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: -2px;
+  height: 3px;
+  background-image: var(--brand-gradient);
+  border-radius: 3px;
 }
 
 .tabs .tab .icon svg {
@@ -203,16 +222,18 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .card {
-  background-color: var(--white);
-  border: 1px solid var(--border-color);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-sm);
   margin-bottom: 1.5rem;
-  transition: box-shadow var(--transition-speed) ease, transform var(--transition-speed) ease;
+  backdrop-filter: saturate(1.05) blur(6px);
+  transition: box-shadow var(--transition-speed) ease, transform var(--transition-speed) ease, outline var(--transition-speed) ease;
 }
 
 .card:hover {
   box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 /* Toggle de Tema */
@@ -296,15 +317,14 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-primary {
   color: var(--white);
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  background-image: var(--brand-gradient);
+  border-color: transparent;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.28);
 }
 
 .btn-primary:hover {
-  background-color: var(--secondary-color);
-  border-color: var(--secondary-color);
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.3);
+  filter: brightness(1.05) saturate(1.05);
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.34);
   transform: translateY(-1px);
 }
 
@@ -338,9 +358,11 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-color);
   border-collapse: separate; /* Para usar border-radius */
   border-spacing: 0;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--glass-border);
   border-radius: 0.75rem;
   overflow: hidden; /* Garante que o border-radius funcione */
+  background: var(--glass-bg);
+  backdrop-filter: saturate(1.05) blur(6px);
 }
 
 .table th,
@@ -363,7 +385,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .table tbody tr:hover {
-  background-color: #f8fafc; /* slate-50 */
+  background-color: rgba(241, 245, 249, 0.65); /* slate-50 com transparência */
 }
 
 .table-sm th,
