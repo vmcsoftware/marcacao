@@ -163,7 +163,7 @@
   const indexYearSel = qs('#index-year');
   const indexMonthSel = qs('#index-month');
   // Relatórios
-  const relEventosEl = qs('#relatorio-eventos');
+const relEventosEl = qs('#relatorio-eventos');
 const relMinisterioEl = qs('#relatorio-ministerio');
 const relCongregacoesEl = qs('#relatorio-congregacoes');
 const relCongEnsaiosEl = qs('#relatorio-cong-ensaios');
@@ -191,6 +191,17 @@ const btnRelServicoCsv = qs('#rel-servico-export-csv');
 const btnRelServicoXls = qs('#rel-servico-export-xls');
 const btnRelServicoImport = qs('#rel-servico-import');
 const fileRelServicoImport = qs('#file-rel-servico-import');
+
+  // Resultados: Santa Ceia e Batismos
+  const resultadosForm = qs('#form-resultados');
+  const resultadoTipoSel = qs('#resultado-tipo');
+  const resultadoCongSel = qs('#resultado-congregacao');
+  const resultadoDataInput = qs('#resultado-data');
+  const resultadoAtendenteInput = qs('#resultado-atendente');
+  const resultadoIrmaosInput = qs('#resultado-irmaos');
+  const resultadoIrmasInput = qs('#resultado-irmas');
+  const resultadoTotalInput = qs('#resultado-total');
+  const resultadosListEl = qs('#resultados-list');
   let relEventosFilteredCache = null;
   async function applyRelFiltersFetch(){
     try{
@@ -234,6 +245,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
   let eventosCache = [];
   let congregacoesCacheEvents = [];
   let congregacoesByIdEvents = {};
+  let resultadosCache = [];
 
   function toggleAtendenteManual(enable){
     const on = !!enable;
@@ -869,6 +881,100 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       fillSelect(minCongSel, list, 'nomeFormatado');
     });
   }
+
+  // Popular congregações no select de Resultados
+  if(resultadoCongSel){
+    readList('congregacoes', list => {
+      fillSelect(resultadoCongSel, list, 'nomeFormatado');
+    });
+  }
+
+  function updateResultadoTotal(){
+    const a = parseInt(resultadoIrmaosInput && resultadoIrmaosInput.value ? resultadoIrmaosInput.value : '0', 10) || 0;
+    const b = parseInt(resultadoIrmasInput && resultadoIrmasInput.value ? resultadoIrmasInput.value : '0', 10) || 0;
+    if(resultadoTotalInput) resultadoTotalInput.value = String(a + b);
+  }
+  resultadoIrmaosInput && resultadoIrmaosInput.addEventListener('input', updateResultadoTotal);
+  resultadoIrmasInput && resultadoIrmasInput.addEventListener('input', updateResultadoTotal);
+
+  function renderResultados(list){
+    if(!resultadosListEl) return;
+    const arr = Array.isArray(list) ? list.slice() : [];
+    if(!arr.length){
+      resultadosListEl.innerHTML = '<tr><td colspan="7" class="text-muted">Nenhum resultado lançado</td></tr>';
+      return;
+    }
+    const rows = arr.sort((a,b)=>{
+      const ad = parseDateYmdLocal(a.data) || new Date(a.data||0);
+      const bd = parseDateYmdLocal(b.data) || new Date(b.data||0);
+      return bd - ad; // ordem decrescente por data
+    }).map(r => {
+      const congLabel = r.congregacaoNome || r.congregacaoId || '';
+      const dt = formatDate(r.data);
+      return `<tr>
+        <td>${dt}</td>
+        <td>${r.tipo||''}</td>
+        <td>${congLabel}</td>
+        <td>${r.atendente||''}</td>
+        <td>${r.irmaos||0}</td>
+        <td>${r.irmas||0}</td>
+        <td>${r.total||((r.irmaos||0)+(r.irmas||0))}</td>
+      </tr>`;
+    }).join('');
+    resultadosListEl.innerHTML = rows;
+  }
+
+  // Ler resultados do Firebase
+  readList('resultados', list => {
+    resultadosCache = list || [];
+    renderResultados(resultadosCache);
+  });
+
+  // Salvar resultados
+  resultadosForm && resultadosForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    try{
+      const tipo = resultadoTipoSel && resultadoTipoSel.value ? resultadoTipoSel.value : '';
+      const congregacaoId = resultadoCongSel && resultadoCongSel.value ? resultadoCongSel.value : '';
+      const data = resultadoDataInput && resultadoDataInput.value ? resultadoDataInput.value : '';
+      const atendente = resultadoAtendenteInput && resultadoAtendenteInput.value ? resultadoAtendenteInput.value.trim() : '';
+      const irmaos = parseInt(resultadoIrmaosInput && resultadoIrmaosInput.value ? resultadoIrmaosInput.value : '0', 10) || 0;
+      const irmas = parseInt(resultadoIrmasInput && resultadoIrmasInput.value ? resultadoIrmasInput.value : '0', 10) || 0;
+      const total = irmaos + irmas;
+      if(!tipo || !congregacaoId || !data || !atendente){ toast('Preencha todos os campos obrigatórios', 'error'); return; }
+      // Encontrar nome formatado da congregação
+      let congregacaoNome = '';
+      try{
+        const opt = resultadoCongSel && resultadoCongSel.selectedOptions && resultadoCongSel.selectedOptions[0];
+        congregacaoNome = opt ? opt.textContent : '';
+      }catch{}
+      const obj = { tipo, congregacaoId, congregacaoNome, data, atendente, irmaos, irmas, total };
+      const res = await write('resultados', obj);
+      if(res){
+        toast('Resultado salvo');
+        // limpar formulário
+        resultadoTipoSel && (resultadoTipoSel.value='');
+        resultadoCongSel && (resultadoCongSel.value='');
+        resultadoDataInput && (resultadoDataInput.value='');
+        resultadoAtendenteInput && (resultadoAtendenteInput.value='');
+        resultadoIrmaosInput && (resultadoIrmaosInput.value='0');
+        resultadoIrmasInput && (resultadoIrmasInput.value='0');
+        updateResultadoTotal();
+      }
+    }catch(err){ console.error(err); toast('Falha ao salvar resultado', 'error'); }
+  });
+
+  // Limpar formulário
+  const btnResultadoLimpar = qs('#resultado-limpar');
+  btnResultadoLimpar && btnResultadoLimpar.addEventListener('click', ()=>{
+    resultadoTipoSel && (resultadoTipoSel.value='');
+    resultadoCongSel && (resultadoCongSel.value='');
+    resultadoDataInput && (resultadoDataInput.value='');
+    resultadoAtendenteInput && (resultadoAtendenteInput.value='');
+    resultadoIrmaosInput && (resultadoIrmaosInput.value='0');
+    resultadoIrmasInput && (resultadoIrmasInput.value='0');
+    updateResultadoTotal();
+  });
 
   // Popular atendentes (Ministério) no select de evento
   if(eventoAtendente){

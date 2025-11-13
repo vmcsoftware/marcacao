@@ -766,9 +766,6 @@ legend {
   margin-bottom: 0.5rem;
 }
 
-#agendar-atendente-wrapper input[type="text"] {
-  /* Já coberto pelos estilos de input genéricos */
-}
 
 /* Grid moderno de relatórios */
 .reports-grid {

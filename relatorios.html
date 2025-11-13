@@ -104,6 +104,70 @@
           <ul id="relatorio-eventos"></ul>
         </div>
         <div class="report">
+          <h3>Resultados de Santa Ceia e Batismos</h3>
+          <form id="form-resultados" class="row g-3 mb-3">
+            <div class="col-12 col-md-3">
+              <label for="resultado-tipo" class="form-label">Serviço</label>
+              <select id="resultado-tipo" class="form-select form-select-sm" required>
+                <option value="">Selecionar...</option>
+                <option value="Santa Ceia">Santa Ceia</option>
+                <option value="Batismos">Batismos</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-4">
+              <label for="resultado-congregacao" class="form-label">Congregação</label>
+              <select id="resultado-congregacao" class="form-select form-select-sm" required>
+                <option value="">Selecionar...</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-2">
+              <label for="resultado-data" class="form-label">Data</label>
+              <input id="resultado-data" type="date" class="form-control form-control-sm" required />
+            </div>
+            <div class="col-6 col-md-3">
+              <label for="resultado-atendente" class="form-label">Quem atendeu</label>
+              <input id="resultado-atendente" type="text" class="form-control form-control-sm" placeholder="Nome" required />
+            </div>
+
+            <div class="col-4 col-md-2">
+              <label for="resultado-irmaos" class="form-label">Irmãos</label>
+              <input id="resultado-irmaos" type="number" min="0" class="form-control form-control-sm" value="0" required />
+            </div>
+            <div class="col-4 col-md-2">
+              <label for="resultado-irmas" class="form-label">Irmãs</label>
+              <input id="resultado-irmas" type="number" min="0" class="form-control form-control-sm" value="0" required />
+            </div>
+            <div class="col-4 col-md-2">
+              <label for="resultado-total" class="form-label">Total</label>
+              <input id="resultado-total" type="number" class="form-control form-control-sm" value="0" readonly />
+            </div>
+
+            <div class="col-12 col-md-auto align-self-end">
+              <button id="resultado-salvar" class="btn btn-primary btn-sm" type="submit">Salvar</button>
+              <button id="resultado-limpar" class="btn btn-outline-secondary btn-sm" type="button">Limpar</button>
+            </div>
+            <div class="section-help">Preencha os totais de irmãos e irmãs; o total é calculado automaticamente.</div>
+          </form>
+          <div class="table-responsive">
+            <table class="table table-sm" id="resultados-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Serviço</th>
+                  <th>Congregação</th>
+                  <th>Quem atendeu</th>
+                  <th>Irmãos</th>
+                  <th>Irmãs</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="resultados-list">
+                <tr><td colspan="7" class="text-muted">Nenhum resultado lançado</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="report">
           <h3>Ministério por Função</h3>
           <div class="section-help">Totais por função (Ancião, Diácono, Cooperadores), com base nos dados atuais.</div>
           <ul id="relatorio-ministerio"></ul>
