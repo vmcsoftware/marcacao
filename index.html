@@ -25,7 +25,7 @@
         <span class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M7 10h10v2H7zm0 4h7v2H7z" fill="currentColor"/><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" fill="currentColor"/></svg>
         </span>
-        Atendimento
+        Reforço de Coletas
       </a>
       <a class="nav-link tab" href="ministerio.html" id="tab-btn-ministerio">
         <span class="icon" aria-hidden="true">
@@ -66,11 +66,11 @@
 
   <main class="content container my-3">
     <!-- Eventos -->
-    <section id="tab-eventos" class="tab-panel active" role="tabpanel" aria-labelledby="Atendimento">
+    <section id="tab-eventos" class="tab-panel active" role="tabpanel" aria-labelledby="Reforço de Coletas">
       <div class="card shadow-sm p-3 mb-3">
         <div class="grid-2">
           <div>
-            <h2>Marcar Atendimento</h2>
+            <h2>Marcar Reforço de Coletas</h2>
             <form id="form-evento" class="form-grid">
           <label>
             Congregação
@@ -132,7 +132,7 @@
             <textarea name="observacoes" rows="3" placeholder="Detalhes, observações..."></textarea>
           </label>
               <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Salvar Atendimento</button>
+                <button type="submit" class="btn btn-primary">Salvar Reforço de Coletas</button>
                 <button type="reset" class="btn btn-outline-secondary">Limpar</button>
               </div>
             </form>
@@ -141,6 +141,10 @@
             <div class="d-flex justify-content-between align-items-center mb-2">
               <h4 class="meta mb-0">Atendimentos Cadastrados</h4>
               <div class="d-flex align-items-center">
+                <label for="index-year" class="mb-0 me-2">Ano</label>
+                <select id="index-year" class="form-select form-select-sm" style="width:auto"></select>
+                <label for="index-month" class="mb-0 ms-3 me-2">Mês</label>
+                <select id="index-month" class="form-select form-select-sm" style="width:auto"></select>
                 <button type="button" id="btn-imprimir-eventos" class="btn btn-sm btn-outline-primary">Imprimir</button>
                 <button type="button" id="btn-exportar-pdf-eventos" class="btn btn-sm btn-outline-secondary ms-2" title="Exportar em PDF">PDF</button>
                 <button type="button" id="btn-exportar-xls-eventos" class="btn btn-sm btn-outline-secondary ms-2" title="Exportar em XLS">XLS</button>

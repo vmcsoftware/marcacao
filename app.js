@@ -159,6 +159,9 @@
   const btnImprimirEventos = qs('#btn-imprimir-eventos');
   const btnExportarPdfEventos = qs('#btn-exportar-pdf-eventos');
   const btnExportarXlsEventos = qs('#btn-exportar-xls-eventos');
+  // Filtro de tabela (Index): Ano/Mês
+  const indexYearSel = qs('#index-year');
+  const indexMonthSel = qs('#index-month');
   // Relatórios
   const relEventosEl = qs('#relatorio-eventos');
 const relMinisterioEl = qs('#relatorio-ministerio');
@@ -181,6 +184,11 @@ const btnEnsaiosCopy = qs('#rel-ensaios-copy');
 const relBairroSel = qs('#rel-bairro');
 const relEnsaiosNextOnly = qs('#rel-ensaios-next-only');
 const btnRelBackfillCidade = qs('#rel-backfill-cidade');
+// Export de Serviços (Relatórios)
+const relServicoTipoSel = qs('#rel-servico-tipo');
+const btnRelServicoPdf = qs('#rel-servico-export-pdf');
+const btnRelServicoCsv = qs('#rel-servico-export-csv');
+const btnRelServicoXls = qs('#rel-servico-export-xls');
   let relEventosFilteredCache = null;
   async function applyRelFiltersFetch(){
     try{
@@ -415,7 +423,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       delete formEvento.dataset.editId;
       const submitBtn = formEvento.querySelector('button[type="submit"]');
       const resetBtn = formEvento.querySelector('button[type="reset"]');
-      if(submitBtn) submitBtn.textContent = 'Salvar Atendimento';
+      if(submitBtn) submitBtn.textContent = 'Salvar Reforço de Coletas';
       if(resetBtn) resetBtn.textContent = 'Limpar';
     });
     formEvento.addEventListener('reset', ()=>{ toggleAtendenteManual(false); });
@@ -456,6 +464,28 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       }
       renderTabelaReforcos();
     });
+  // Inicializar selects de Ano/Mês na Index
+  (function initIndexMonthYear(){
+    try{
+      if(indexYearSel){
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const years = [currentYear-1, currentYear, currentYear+1];
+        indexYearSel.innerHTML = years.map(y=>`<option value="${y}" ${y===currentYear?'selected':''}>${y}</option>`).join('');
+        indexYearSel.addEventListener('change', ()=>{ try{ renderTabelaReforcos(); }catch{} });
+      }
+      if(indexMonthSel){
+        const months = ['Todos','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const now = new Date();
+        const m = now.getMonth()+1;
+        indexMonthSel.innerHTML = months.map((label, i)=>{
+          if(i===0) return `<option value="">${label}</option>`; // Todos
+          return `<option value="${i}" ${i===m?'selected':''}>${label}</option>`;
+        }).join('');
+        indexMonthSel.addEventListener('change', ()=>{ try{ renderTabelaReforcos(); }catch{} });
+      }
+    }catch{}
+  }());
   if(listaEventos){
     listaEventos.addEventListener('click', async (e)=>{
         const congBtn = e.target.closest('.congregacao-link');
@@ -487,13 +517,21 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
             <div class="meta">Data/Hora: ${dataFmt} ${hora && hora!=='-' ? `às ${hora}` : ''}</div>
             <div class="meta">Quem atende: ${atendente}</div>
             ${obs}
+            <div class="mt-2">
+              <button class="btn btn-sm btn-outline-primary" data-action="edit-ev" data-id="${last.id}">Editar</button>
+              <button class="btn btn-sm btn-danger ms-2" data-action="delete-ev" data-id="${last.id}">Excluir</button>
+            </div>
           `;
           details.innerHTML = html;
+          details.dataset.lastId = last.id||'';
+          details.dataset.congId = congId||'';
           details.classList.toggle('hidden');
           return;
         }
         const btnEdit = e.target.closest('button[data-action="edit-ev"]');
         const btnDel = e.target.closest('button[data-action="delete-ev"]');
+        const btnConfirmDel = e.target.closest('button[data-action="confirm-delete"]');
+        const btnCancelDel = e.target.closest('button[data-action="cancel-delete"]');
         if(btnEdit){
           const id = btnEdit.getAttribute('data-id');
           const ev = (eventosCache||[]).find(x=>x.id===id);
@@ -501,7 +539,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           formEvento.dataset.editId = ev.id;
           const submitBtn = formEvento.querySelector('button[type="submit"]');
           const resetBtn = formEvento.querySelector('button[type="reset"]');
-          if(submitBtn) submitBtn.textContent = 'Atualizar Atendimento';
+          if(submitBtn) submitBtn.textContent = 'Atualizar Reforço de Coletas';
           if(resetBtn) resetBtn.textContent = 'Cancelar Edição';
           const tipoSel = formEvento.querySelector('select[name="tipo"]');
           const dataInp = formEvento.querySelector('input[name="data"]');
@@ -520,19 +558,65 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
             toggleAtendenteManual(false);
           }
           if(obsTxt) obsTxt.value = ev.observacoes||'';
+
+          // Mostrar o formulário sem precisar rolar manualmente: centraliza, foca e destaca
+          try {
+            // Garante que a aba de Reforço esteja visível (neste arquivo já é a ativa)
+            const firstField = dataInp || formEvento.querySelector('input, select, textarea');
+            formEvento.classList.add('form-highlight');
+            formEvento.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+              if(firstField && typeof firstField.focus === 'function') { firstField.focus(); }
+            }, 250);
+            const handleFormGlowEnd = () => {
+              formEvento.classList.remove('form-highlight');
+              formEvento.removeEventListener('animationend', handleFormGlowEnd);
+            };
+            formEvento.addEventListener('animationend', handleFormGlowEnd);
+          } catch {}
         }
         if(btnDel){
           const id = btnDel.getAttribute('data-id');
-          const ok = window.confirm('Excluir este atendimento?');
-          if(!ok) return;
+          const container = btnDel.closest('.list-item');
+          const details = container ? container.querySelector('.list-details') : null;
+          if(!details) return;
+          // Inserir alerta vermelho de confirmação
+          const existing = details.querySelector('.delete-confirm');
+          if(existing){ existing.remove(); }
+          const div = document.createElement('div');
+          div.className = 'delete-confirm alert alert-danger mt-2';
+          div.innerHTML = `
+            <div><strong>Confirma a exclusão deste reforço?</strong></div>
+            <div class="mt-2">
+              <button class="btn btn-sm btn-danger" data-action="confirm-delete" data-id="${id}">Confirmar Exclusão</button>
+              <button class="btn btn-sm btn-outline-secondary ms-2" data-action="cancel-delete">Cancelar</button>
+            </div>
+          `;
+          details.appendChild(div);
+          details.classList.remove('hidden');
+          return;
+        }
+        if(btnConfirmDel){
+          const id = btnConfirmDel.getAttribute('data-id');
           try{
             const removed = await remove('eventos', id);
-            if(removed){ toast('Atendimento removido'); }
+            if(removed){
+              toast('Reforço removido');
+              // Atualiza cache para refletir remoção imediata nesta sessão
+              eventosCache = (eventosCache||[]).filter(x=>x.id===undefined || x.id!==id);
+              try{ renderTabelaReforcos(); }catch{}
+            }
           }catch(err){
             console.error(err);
             const msg = (err && (err.code||err.message)) || 'Falha ao excluir atendimento';
             toast(msg, 'error');
           }
+          return;
+        }
+        if(btnCancelDel){
+          const confirmEl = e.target.closest('.delete-confirm');
+          if(confirmEl) confirmEl.remove();
+          return;
         }
       });
     }
@@ -1678,6 +1762,152 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       }catch(err){ console.error(err); toast('Falha ao exportar em PDF', 'error'); }
     });
   }
+
+  // Exportar Batismos, Santa Ceia e Ensaios Regionais
+  (function(){
+    // Auxiliares para montar linhas genéricas
+    const fmtDateYmd = (ymd)=> (ymd && /^\d{4}-\d{2}-\d{2}$/.test(ymd)) ? formatDate(ymd) : (ymd||'-');
+    const safe = (s)=> String(s||'');
+    const getCidadeFromEvento = (ev)=> {
+      if(ev.cidade) return ev.cidade;
+      try{
+        const cong = congregacoesByIdEvents[ev.congregacaoId];
+        return cong && cong.cidade ? cong.cidade : '';
+      }catch{}
+      return '';
+    };
+    const labelForEvento = (ev)=> {
+      try{
+        const cong = congregacoesByIdEvents[ev.congregacaoId];
+        return ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
+      }catch{}
+      return ev.congregacaoNome || '-';
+    };
+
+    const getServicosRows = (kind)=>{
+      const rows = [];
+      const ySel = (relYearSel && relYearSel.value) ? parseInt(relYearSel.value,10) : null;
+      const mSel = (relMonthSel && relMonthSel.value) ? parseInt(relMonthSel.value,10) : null;
+      const citySel = (relCidadeSel && relCidadeSel.value) ? String(relCidadeSel.value) : '';
+      if(kind === 'Ensaios Regionais'){
+        const base = Array.isArray(eventosCache) ? eventosCache : [];
+        base.forEach(ev => {
+          if(ev.tipo !== 'Ensaio') return;
+          const sub = String(ev.ensaioTipo||'').toLowerCase();
+          if(!sub.includes('regional')) return;
+          const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+          if(ySel && d && d.getFullYear() !== ySel) return;
+          if(mSel && d && (d.getMonth()+1) !== mSel) return;
+          if(citySel && safe(getCidadeFromEvento(ev)) !== citySel) return;
+          rows.push({
+            Data: fmtDateYmd(ev.data),
+            Hora: typeof horaDoEvento==='function' ? horaDoEvento(ev) : '-',
+            Cidade: getCidadeFromEvento(ev) || '',
+            Congregacao: labelForEvento(ev),
+            Responsavel: ev.atendenteNome||'',
+            Tipo: 'Ensaio Regional',
+            Descricao: ev.observacoes||''
+          });
+        });
+      } else {
+        const base = Array.isArray(agenda2026Cache) ? agenda2026Cache : [];
+        const needle = kind.toLowerCase();
+        base.forEach(ev => {
+          const tipoStr = String(ev.tipo||ev.servico||'').toLowerCase();
+          if(!tipoStr.includes(needle.includes('batismo') ? 'batismo' : 'santa ceia')) return;
+          const d = parseDateYmdLocal(ev.data) || parseDataAgendaValor(ev.data);
+          if(ySel && d && d.getFullYear() !== ySel) return;
+          if(mSel && d && (d.getMonth()+1) !== mSel) return;
+          if(citySel && safe(ev.cidade) !== citySel) return;
+          rows.push({
+            Data: d ? fmtDateYmd(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`) : fmtDateYmd(ev.data),
+            Hora: ev.hora||'-',
+            Cidade: ev.cidade||'',
+            Congregacao: ev.congregacao||'',
+            Responsavel: ev.responsavel||'',
+            Tipo: (ev.tipo||ev.servico||kind||'').toString(),
+            Descricao: ev.descricao||''
+          });
+        });
+      }
+      return rows;
+    };
+
+    const toCsvGen = (rows) => {
+      const headers = ['Data','Hora','Cidade','Congregacao','Responsavel','Tipo','Descricao'];
+      const esc = (v)=> String(v||'').replace(/"/g,'""');
+      const lines = [headers.join(',')].concat(rows.map(r=> headers.map(h=> `"${esc(r[h])}"`).join(',')));
+      return lines.join('\n');
+    };
+    const toXlsGen = (rows) => {
+      const headers = ['Data','Hora','Cidade','Congregacao','Responsavel','Tipo','Descricao'];
+      const esc = (v)=> String(v||'').replace(/\t/g,' ');
+      const lines = [headers.join('\t')].concat(rows.map(r=> headers.map(h=> esc(r[h])).join('\t')));
+      return lines.join('\n');
+    };
+    const rowsToHtmlTable = (rows) => {
+      const headers = ['Data','Hora','Cidade','Congregacao','Responsavel','Tipo','Descricao'];
+      const thead = `<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>`;
+      const tbody = `<tbody>${rows.map(r=> `<tr>${headers.map(h=>`<td>${String(r[h]||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>`).join('')}</tr>`).join('')}</tbody>`;
+      return `<table border='1' style='width:100%;border-collapse:collapse'>${thead}${tbody}</table>`;
+    };
+    const downloadBlob = (filename, content, mime) => {
+      const blob = new Blob([content], { type: mime || 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+    };
+
+    if(btnRelServicoCsv){
+      btnRelServicoCsv.addEventListener('click', ()=>{
+        try{
+          const kind = relServicoTipoSel ? relServicoTipoSel.value : '';
+          if(!kind){ toast('Selecione o serviço para exportar', 'error'); return; }
+          const rows = getServicosRows(kind);
+          if(!rows.length){ toast('Nenhum dado para exportar', 'error'); return; }
+          const csv = toCsvGen(rows);
+          const fname = `servicos_${(kind||'').toLowerCase().replace(/\s+/g,'_')}.csv`;
+          downloadBlob(fname, csv, 'text/csv;charset=utf-8');
+        }catch(err){ console.error(err); toast('Falha ao exportar CSV', 'error'); }
+      });
+    }
+    if(btnRelServicoXls){
+      btnRelServicoXls.addEventListener('click', ()=>{
+        try{
+          const kind = relServicoTipoSel ? relServicoTipoSel.value : '';
+          if(!kind){ toast('Selecione o serviço para exportar', 'error'); return; }
+          const rows = getServicosRows(kind);
+          if(!rows.length){ toast('Nenhum dado para exportar', 'error'); return; }
+          const xls = toXlsGen(rows);
+          const fname = `servicos_${(kind||'').toLowerCase().replace(/\s+/g,'_')}.xls`;
+          downloadBlob(fname, xls, 'application/vnd.ms-excel');
+        }catch(err){ console.error(err); toast('Falha ao exportar XLS', 'error'); }
+      });
+    }
+    if(btnRelServicoPdf){
+      btnRelServicoPdf.addEventListener('click', ()=>{
+        try{
+          const kind = relServicoTipoSel ? relServicoTipoSel.value : '';
+          if(!kind){ toast('Selecione o serviço para exportar', 'error'); return; }
+          const rows = getServicosRows(kind);
+          if(!rows.length){ toast('Nenhum dado para exportar', 'error'); return; }
+          const tableHtml = rowsToHtmlTable(rows);
+          const html = `<!DOCTYPE html><html lang='pt-BR'><head><meta charset='UTF-8'/><title>Relatórios - ${kind}</title>
+<style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;color:#000;margin:24px}h1{font-size:18px;margin:0 0 8px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:6px;font-size:12px}th{background:#f2f2f2}.no-print{margin:12px 0}@media print{.no-print{display:none}}</style>
+</head><body>
+<h1>Relatórios - ${kind}</h1>
+<div class='no-print'>Use Ctrl+P e escolha "Salvar como PDF".</div>
+${tableHtml}
+<script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 200); });</script>
+</body></html>`;
+          const w = window.open('', '_blank');
+          if(!w){ toast('Não foi possível abrir a janela de impressão (pop-up bloqueado)', 'error'); return; }
+          w.document.open(); w.document.write(html); w.document.close();
+          toast('Abra a caixa de impressão e salve em PDF');
+        }catch(err){ console.error(err); toast('Falha ao exportar PDF', 'error'); }
+      });
+    }
+  })();
   if(btnRelXls){
     btnRelXls.addEventListener('click', ()=>{
       try{
@@ -2317,12 +2547,23 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
        const bd = parseDateYmdLocal(b.data) || new Date(b.data);
        return ad - bd; // crescente por data
      });
-    if(!reforcos.length){
+    // Aplicar filtro de Ano/Mês quando disponível
+    const selYear = indexYearSel && indexYearSel.value ? parseInt(indexYearSel.value,10) : null;
+    const selMonth = indexMonthSel && indexMonthSel.value ? parseInt(indexMonthSel.value,10) : null;
+    const reforcosFiltered = reforcos.filter(ev => {
+      const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+      if(!d || isNaN(d.getTime())) return false;
+      if(selYear && d.getFullYear() !== selYear) return false;
+      if(selMonth && (d.getMonth()+1) !== selMonth) return false;
+      return true;
+    });
+    const listToRender = reforcosFiltered;
+    if(!listToRender.length){
       tabelaReforcosBody.innerHTML = '<tr><td colspan="5" class="text-muted">Nenhum atendimento cadastrado</td></tr>';
       return;
     }
     const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-    tabelaReforcosBody.innerHTML = reforcos.map(ev => {
+    tabelaReforcosBody.innerHTML = listToRender.map(ev => {
       const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
       const diaNome = diasSemanaPt[d.getDay()];
       const cong = congregacoesByIdEvents[ev.congregacaoId];
@@ -2779,6 +3020,13 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         toast('Arquivo XLS gerado');
       }catch(err){ console.error(err); toast('Falha ao exportar XLS', 'error'); }
     });
+  }
+
+  // Garantir cache da Agenda 2026 disponível também na página de Relatórios
+  if(relServicoTipoSel){
+    try{
+      readList('agenda2026', list => { agenda2026Cache = list || []; });
+    }catch(err){ console.error(err); }
   }
 
   // ===================== Agenda Mensal (Página agenda.html) =====================

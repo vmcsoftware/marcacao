@@ -26,7 +26,7 @@
         <span class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M7 10h10v2H7zm0 4h7v2H7z" fill="currentColor"/><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" fill="currentColor"/></svg>
         </span>
-        Atendimento
+        Reforço de Coletas
       </a>
       <a class="nav-link tab" href="ministerio.html" id="tab-btn-ministerio">
         <span class="icon" aria-hidden="true">
@@ -141,6 +141,26 @@
           </div>
           <div class="section-help">Use “Próximo apenas” para destacar a próxima data por congregação. Os filtros globais (Ano, Mês, Cidade) acima também se aplicam.</div>
           <ul id="relatorio-cong-ensaios"></ul>
+        </div>
+        <div class="report">
+          <h3>Exportar Batismos, Santa Ceia e Ensaios Regionais</h3>
+          <div class="row g-2 align-items-end mb-2">
+            <div class="col-auto">
+              <label for="rel-servico-tipo" class="form-label">Serviço</label>
+              <select id="rel-servico-tipo" class="form-select form-select-sm">
+                <option value="Santa Ceia">Santa Ceia</option>
+                <option value="Batismos">Batismos</option>
+                <option value="Ensaios Regionais">Ensaios Regionais</option>
+              </select>
+            </div>
+            <div class="col-auto">
+              <label class="form-label d-block">Exportar</label>
+              <button id="rel-servico-export-pdf" class="btn btn-outline-primary btn-sm">PDF</button>
+              <button id="rel-servico-export-csv" class="btn btn-outline-success btn-sm">CSV</button>
+              <button id="rel-servico-export-xls" class="btn btn-outline-success btn-sm">XLS</button>
+            </div>
+          </div>
+          <div class="section-help">Escolha o serviço e exporte em PDF, CSV ou XLS. Respeita filtros globais de Ano/Mês/Cidade quando aplicável.</div>
         </div>
       </div>
     </div>
