@@ -1,5 +1,8 @@
-# Evitar subir segredos e arquivos de sistema
-config.js
+# Evitar subir arquivos de sistema e dependências
 .DS_Store
 Thumbs.db
 node_modules/
+
+# Observação: o arquivo `config.js` será versionado para habilitar o deploy do site
+# Está disponível um modelo em `config.example.js`. Copie e preencha conforme sua
+# configuração do Firebase.
