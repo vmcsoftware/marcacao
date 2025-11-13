@@ -189,6 +189,8 @@ const relServicoTipoSel = qs('#rel-servico-tipo');
 const btnRelServicoPdf = qs('#rel-servico-export-pdf');
 const btnRelServicoCsv = qs('#rel-servico-export-csv');
 const btnRelServicoXls = qs('#rel-servico-export-xls');
+const btnRelServicoImport = qs('#rel-servico-import');
+const fileRelServicoImport = qs('#file-rel-servico-import');
   let relEventosFilteredCache = null;
   async function applyRelFiltersFetch(){
     try{
@@ -1907,6 +1909,125 @@ ${tableHtml}
         }catch(err){ console.error(err); toast('Falha ao exportar PDF', 'error'); }
       });
     }
+  })();
+
+  // Importar serviços em Relatórios (CSV/XLS/XLSX)
+  (function(){
+    if(!btnRelServicoImport || !fileRelServicoImport) return;
+    const normalizeYmd = (s) => {
+      if(!s) return '';
+      const str = String(s).trim();
+      // yyyy-mm-dd
+      const m1 = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if(m1){ const y=m1[1]; const m=m1[2].padStart(2,'0'); const d=m1[3].padStart(2,'0'); return `${y}-${m}-${d}`; }
+      // dd/mm/yyyy
+      const m2 = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+      if(m2){ const d=m2[1].padStart(2,'0'); const m=m2[2].padStart(2,'0'); let y=m2[3]; if(y.length===2) y = `20${y}`; return `${y}-${m}-${d}`; }
+      return str;
+    };
+    const clean = (v)=> String(v==null?'':v).trim();
+    const headersStd = ['Data','Hora','Cidade','Congregacao','Responsavel','Tipo','Descricao'];
+    const parseCsv = async (file)=>{
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(l=> l.trim().length>0);
+      if(!lines.length) return [];
+      const parseLine = (line)=>{
+        const re = /(?:^|,)\s*("(?:[^"]|"")*"|[^,]*)/g; // matches fields with quotes
+        const out=[]; let m; while((m=re.exec(line))){
+          let v = m[1];
+          if(v && v.startsWith('"') && v.endsWith('"')) v = v.slice(1,-1).replace(/""/g,'"');
+          out.push(v);
+        }
+        return out;
+      };
+      const hdr = parseLine(lines[0]).map(h=> h.trim());
+      const idx = (name)=> hdr.findIndex(h=> h.toLowerCase() === name.toLowerCase());
+      const mapIdx = headersStd.map(h=> idx(h));
+      const rows = [];
+      for(let i=1;i<lines.length;i++){
+        const cols = parseLine(lines[i]);
+        const obj = {};
+        headersStd.forEach((h,ix)=>{ obj[h] = mapIdx[ix] >= 0 ? cols[mapIdx[ix]] : ''; });
+        rows.push(obj);
+      }
+      return rows;
+    };
+    const parseXlsx = async (file)=>{
+      try{
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type:'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const arr = XLSX.utils.sheet_to_json(ws, { defval:'', raw:false });
+        return arr.map(r=>{
+          const obj = {};
+          headersStd.forEach(h=>{ obj[h] = r[h] ?? r[h.toLowerCase()] ?? ''; });
+          return obj;
+        });
+      }catch(err){ console.error(err); return []; }
+    };
+    const importRows = async (kind, rows)=>{
+      if(!db){ toast('Firebase não configurado', 'error'); return; }
+      const limit = 500; let count=0;
+      for(const r of rows){
+        if(count>=limit) break;
+        const Data = normalizeYmd(clean(r.Data));
+        const Hora = clean(r.Hora);
+        const Cidade = clean(r.Cidade);
+        const Congregacao = clean(r.Congregacao);
+        const Responsavel = clean(r.Responsavel);
+        const Tipo = clean(r.Tipo);
+        const Descricao = clean(r.Descricao);
+        try{
+          if(kind === 'Ensaios Regionais'){
+            const ev = {
+              data: Data,
+              tipo: 'Ensaio',
+              ensaioTipo: 'Regional',
+              atendenteNome: Responsavel || '',
+              congregacaoNome: Congregacao || '',
+              cidade: Cidade || '',
+              observacoes: Descricao || ''
+            };
+            await write('eventos', ev);
+          } else {
+            const ag = {
+              data: Data,
+              hora: Hora || '',
+              tipo: kind || Tipo || '',
+              cidade: Cidade || '',
+              congregacao: Congregacao || '',
+              responsavel: Responsavel || '',
+              descricao: Descricao || ''
+            };
+            await write('agenda2026', ag);
+          }
+          count++;
+        }catch(err){ console.error(err); }
+      }
+      toast(`Importação concluída: ${count} registros`);
+    };
+    btnRelServicoImport.addEventListener('click', ()=>{
+      try{
+        if(!relServicoTipoSel || !relServicoTipoSel.value){ toast('Selecione o serviço antes de importar', 'error'); return; }
+        fileRelServicoImport && fileRelServicoImport.click();
+      }catch(err){ console.error(err); toast('Falha ao iniciar importação', 'error'); }
+    });
+    fileRelServicoImport.addEventListener('change', async (e)=>{
+      try{
+        const kind = relServicoTipoSel ? relServicoTipoSel.value : '';
+        const file = e.target.files && e.target.files[0];
+        if(!kind){ toast('Selecione o serviço', 'error'); return; }
+        if(!file){ return; }
+        const name = (file.name||'').toLowerCase();
+        let rows = [];
+        if(name.endsWith('.csv')) rows = await parseCsv(file);
+        else if(name.endsWith('.xls') || name.endsWith('.xlsx')) rows = await parseXlsx(file);
+        else { toast('Formato não suportado. Use CSV/XLS/XLSX.', 'error'); return; }
+        if(!rows.length){ toast('Arquivo vazio ou sem dados', 'error'); return; }
+        await importRows(kind, rows);
+        e.target.value = '';
+      }catch(err){ console.error(err); toast('Falha ao importar', 'error'); }
+    });
   })();
   if(btnRelXls){
     btnRelXls.addEventListener('click', ()=>{

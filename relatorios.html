@@ -159,8 +159,13 @@
               <button id="rel-servico-export-csv" class="btn btn-outline-success btn-sm">CSV</button>
               <button id="rel-servico-export-xls" class="btn btn-outline-success btn-sm">XLS</button>
             </div>
+            <div class="col-auto">
+              <label class="form-label d-block">Importar</label>
+              <button id="rel-servico-import" class="btn btn-outline-success btn-sm">Importar</button>
+              <input type="file" id="file-rel-servico-import" accept=".csv,.xlsx,.xls" hidden />
+            </div>
           </div>
-          <div class="section-help">Escolha o serviço e exporte em PDF, CSV ou XLS. Respeita filtros globais de Ano/Mês/Cidade quando aplicável.</div>
+          <div class="section-help">Escolha o serviço e exporte em PDF, CSV ou XLS, ou importe uma planilha/CSV com os campos padrão. Respeita filtros globais de Ano/Mês/Cidade quando aplicável.</div>
         </div>
       </div>
     </div>
@@ -174,6 +179,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
   <script>
     (function(){
