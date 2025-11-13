@@ -2091,7 +2091,12 @@ ${tableHtml}
           count++;
         }catch(err){ console.error(err); }
       }
-      toast(`Importação concluída: ${count} registros`);
+      toast(`Importação concluída: ${count} registros (salvos no banco)`);
+      try {
+        // Atualizar UI de Relatórios após importação
+        const btnApply = qs('#rel-apply');
+        if(btnApply){ btnApply.click(); }
+      } catch(err){ console.warn('Falha ao atualizar UI após importação', err); }
     };
     btnRelServicoImport.addEventListener('click', ()=>{
       try{
