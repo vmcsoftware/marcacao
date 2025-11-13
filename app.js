@@ -2162,6 +2162,46 @@ ${tableHtml}
         return rows;
       }catch(err){ console.error(err); toast('Falha ao ler PDF', 'error'); return []; }
     };
+    // Tenta mapear texto de congregação para um ID conhecido
+    async function resolveCongregacaoIdAndName(labelText){
+      try{
+        const txt = String(labelText||'').trim();
+        if(!txt) return { id:'', nome: '' };
+        const norm = (s)=> String(s||'').trim().toLowerCase();
+        // Se já temos cache, tenta primeiro
+        let list = Array.isArray(congregacoesCacheEvents) ? congregacoesCacheEvents : [];
+        if((list||[]).length===0 && typeof db !== 'undefined' && db){
+          try{
+            const snap = await db.ref('congregacoes').once('value');
+            const val = snap.val()||{};
+            list = Object.values(val);
+          }catch{}
+        }
+        const find = (arr)=>{
+          for(const c of (arr||[])){
+            const nomeFmt = c.nomeFormatado || (c.cidade && c.bairro ? `${c.cidade} - ${c.bairro}` : (c.nome||''));
+            if(norm(nomeFmt) === norm(txt)) return { id: c.id||'', nome: nomeFmt };
+            // Tenta correspondência parcial por cidade/bairro
+            if(norm(`${c.cidade||''} - ${c.bairro||''}`) === norm(txt)) return { id: c.id||'', nome: nomeFmt };
+            if(norm(c.nome||'') === norm(txt)) return { id: c.id||'', nome: nomeFmt };
+          }
+          return null;
+        };
+        const match = find(list);
+        if(match) return match;
+        return { id:'', nome: txt };
+      }catch{ return { id:'', nome: String(labelText||'') }; }
+    }
+    function extractCounts(text){
+      const s = String(text||'');
+      const getNum = (re)=>{ const m = s.match(re); return m ? parseInt(m[1],10)||0 : 0; };
+      // Padrões comuns
+      const irmaos = getNum(/Irm[ãa]os?\s*[:=]\s*(\d+)/i) || getNum(/Homens?\s*[:=]\s*(\d+)/i) || getNum(/H\s*[:=]\s*(\d+)/i);
+      const irmas = getNum(/Irm[ãa]s\s*[:=]\s*(\d+)/i) || getNum(/Mulheres?\s*[:=]\s*(\d+)/i) || getNum(/M\s*[:=]\s*(\d+)/i);
+      let total = getNum(/Total\s*[:=]\s*(\d+)/i) || 0;
+      if(!total) total = (irmaos||0) + (irmas||0);
+      return { irmaos: irmaos||0, irmas: irmas||0, total: total||0 };
+    }
     const importRows = async (kind, rows)=>{
       if(!db){ toast('Firebase não configurado', 'error'); return; }
       const limit = 500; let count=0;
@@ -2186,6 +2226,20 @@ ${tableHtml}
               observacoes: Descricao || ''
             };
             await write('eventos', ev);
+          } else if(kind === 'Santa Ceia' || kind === 'Batismos') {
+            const cong = await resolveCongregacaoIdAndName(Congregacao);
+            const counts = extractCounts(Descricao);
+            const resObj = {
+              tipo: kind,
+              congregacaoId: cong.id || '',
+              congregacaoNome: cong.nome || Congregacao || '',
+              data: Data,
+              atendente: Responsavel || '',
+              irmaos: counts.irmaos || 0,
+              irmas: counts.irmas || 0,
+              total: counts.total || ((counts.irmaos||0)+(counts.irmas||0))
+            };
+            await write('resultados', resObj);
           } else {
             const ag = {
               data: Data,
