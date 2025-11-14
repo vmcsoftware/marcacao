@@ -484,10 +484,12 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         try{ if(typeof renderRelatorios==='function') renderRelatorios(); }catch{}
       }
       if(!listaEventos) return;
-      // Agrupar por congregação e renderizar somente os nomes
+      // Agrupar por congregação e renderizar somente os nomes (apenas reforços de coletas)
       const byCong = {};
       (list||[]).forEach(ev => {
         if(!ev || !ev.congregacaoId) return;
+        const isReforco = ev.tipo === 'Culto Reforço de Coletas' || ev.tipo === 'RJM com Reforço de Coletas';
+        if(!isReforco) return;
         (byCong[ev.congregacaoId] = byCong[ev.congregacaoId] || []).push(ev);
       });
       const items = Object.keys(byCong).map(congId => {
@@ -498,7 +500,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         return { congId, congLabel, events: arr };
       }).sort((a,b)=> a.congLabel.localeCompare(b.congLabel));
       if(!items.length){
-        listaEventos.innerHTML = '<div class="list-item"><div class="list-item-info"><span class="text-muted">Nenhum atendimento cadastrado</span></div></div>';
+        listaEventos.innerHTML = '<div class="list-item"><div class="list-item-info"><span class="text-muted">Nenhum reforço de coletas cadastrado</span></div></div>';
       } else {
         listaEventos.innerHTML = items.map(item => {
           return `
@@ -3304,7 +3306,9 @@ ${tableHtml}
   window._renderTabelaReforcosInner = function(){
     if(!tabelaReforcosBody) return;
     const tipoPriority = (t) => t==='Culto Reforço de Coletas' ? 0 : (t==='RJM com Reforço de Coletas' ? 1 : 2);
-     const reforcos = (eventosCache||[]).slice().sort((a,b)=>{
+     const reforcos = (eventosCache||[])
+       .filter(ev => ev && (ev.tipo==='Culto Reforço de Coletas' || ev.tipo==='RJM com Reforço de Coletas'))
+       .slice().sort((a,b)=>{
        const pa = tipoPriority(a.tipo);
        const pb = tipoPriority(b.tipo);
        if (pa !== pb) return pa - pb; // CO primeiro, depois RJM
@@ -3324,7 +3328,7 @@ ${tableHtml}
     });
     const listToRender = reforcosFiltered;
     if(!listToRender.length){
-      tabelaReforcosBody.innerHTML = '<tr><td colspan="5" class="text-muted">Nenhum atendimento cadastrado</td></tr>';
+      tabelaReforcosBody.innerHTML = '<tr><td colspan="5" class="text-muted">Nenhum reforço de coletas cadastrado</td></tr>';
       return;
     }
     const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
