@@ -544,43 +544,71 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
   if(listaEventos){
     listaEventos.addEventListener('click', async (e)=>{
         const congBtn = e.target.closest('.congregacao-link');
-        if(congBtn){
-          const congId = congBtn.getAttribute('data-congid');
-          const container = congBtn.closest('.list-item');
-          const details = container ? container.querySelector('.list-details') : null;
-          if(!details){ return; }
-          // Encontrar o último reforço cadastrado (CO/RJM) para esta congregação
+
+        // Helper para renderizar todos os reforços (CO/RJM) da congregação
+        const renderCongReforcosDetails = (congId, details) => {
+          const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
           const getTime = (ev) => {
             try{
               const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
               return d ? d.getTime() : 0;
             }catch{ return 0; }
           };
-          const last = (eventosCache||[])
+          const arr = (eventosCache||[])
             .filter(ev => ev && ev.congregacaoId === congId && (ev.tipo === 'Culto Reforço de Coletas' || ev.tipo === 'RJM com Reforço de Coletas'))
-            .sort((a,b)=> getTime(b) - getTime(a))
-            [0];
-          if(!last){ details.innerHTML = '<div class="meta text-muted">Nenhum reforço encontrado para esta congregação.</div>'; details.classList.remove('hidden'); return; }
-          // Montar detalhes compactos do último reforço
-          const tipo = last.tipo + (last.ensaioTipo ? ` - ${last.ensaioTipo}` : '');
-          const dataFmt = formatDate(last.data);
-          const hora = horaDoEvento(last);
-          const atendente = last.atendenteNome || '-';
-          const obs = last.observacoes ? `<div class="meta">Obs: ${last.observacoes}</div>` : '';
-          const html = `
-            <div class="meta">Último reforço: <strong>${tipo}</strong></div>
-            <div class="meta">Data/Hora: ${dataFmt} ${hora && hora!=='-' ? `às ${hora}` : ''}</div>
-            <div class="meta">Quem atende: ${atendente}</div>
-            ${obs}
-            <div class="mt-2">
-              <button class="btn btn-sm btn-outline-primary" data-action="edit-ev" data-id="${last.id}">Editar</button>
-              <button class="btn btn-sm btn-danger ms-2" data-action="delete-ev" data-id="${last.id}">Excluir</button>
-            </div>
+            .sort((a,b)=> getTime(a) - getTime(b));
+          if(!arr.length){
+            details.innerHTML = '<div class="meta text-muted">Nenhum reforço encontrado para esta congregação.</div>';
+            details.classList.remove('hidden');
+            return;
+          }
+          const rows = arr.map(ev => {
+            const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+            const diaNome = diasSemanaPt[d.getDay()];
+            const dataFmt = `${diaNome} - ${formatDate(ev.data)}`;
+            const hora = horaDoEvento(ev);
+            const atendente = ev.atendenteNome || '-';
+            const tipo = ev.tipo + (ev.ensaioTipo ? ` - ${ev.ensaioTipo}` : '');
+            return `
+              <tr>
+                <td>${dataFmt}</td>
+                <td>${hora||'-'}</td>
+                <td>${atendente}${ev.atendenteOutraRegiao ? ' <span class="flag-outra-regiao" title="Irmão de outra região"><svg viewBox="0 0 24 24"><path d="M12 2c-4.4 0-8 3.1-8 7 0 5 8 13 8 13s8-8 8-13c0-3.9-3.6-7-8-7zm0 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" fill="currentColor"/></svg></span>' : ''}</td>
+                <td>${tipo}</td>
+                <td>
+                  <button class="btn btn-sm btn-outline-primary" data-action="edit-ev" data-id="${ev.id}">Editar</button>
+                  <button class="btn btn-sm btn-danger ms-2" data-action="delete-ev" data-id="${ev.id}">Excluir</button>
+                </td>
+              </tr>
+            `;
+          }).join('');
+          details.innerHTML = `
+            <table class="table table-sm mt-2">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Hora</th>
+                  <th>Quem atende</th>
+                  <th>Tipo</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
           `;
-          details.innerHTML = html;
-          details.dataset.lastId = last.id||'';
-          details.dataset.congId = congId||'';
-          details.classList.toggle('hidden');
+          details.classList.remove('hidden');
+        };
+
+        if(congBtn){
+          const congId = congBtn.getAttribute('data-congid');
+          const container = congBtn.closest('.list-item');
+          const details = container ? container.querySelector('.list-details') : null;
+          if(!details){ return; }
+          if(details.classList.contains('hidden')){
+            renderCongReforcosDetails(congId, details);
+          } else {
+            details.classList.add('hidden');
+          }
           return;
         }
         const btnEdit = e.target.closest('button[data-action="edit-ev"]');
@@ -657,9 +685,15 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
             const removed = await remove('eventos', id);
             if(removed){
               toast('Reforço removido');
-              // Atualiza cache para refletir remoção imediata nesta sessão
+              // Atualiza cache e re-renderiza detalhes da congregação
               eventosCache = (eventosCache||[]).filter(x=>x.id===undefined || x.id!==id);
-              try{ renderTabelaReforcos(); }catch{}
+              try{
+                const container = e.target.closest('.list-item');
+                const congId = container ? (container.getAttribute('data-congid') || (container.querySelector('.congregacao-link') && container.querySelector('.congregacao-link').getAttribute('data-congid')) || '') : '';
+                const details = container ? container.querySelector('.list-details') : null;
+                if(congId && details){ renderCongReforcosDetails(congId, details); }
+                renderTabelaReforcos();
+              }catch{}
             }
           }catch(err){
             console.error(err);
