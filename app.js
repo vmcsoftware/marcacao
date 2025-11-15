@@ -287,8 +287,13 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
   const musAgendaBody = qs('#mus-agenda-body');
   const btnMusImprimirCalendario = qs('#btn-musical-imprimir-calendario');
 
-  // Seletores da Agenda Musical (declarar antes de uso)
-  // Bloco de seletores do cadastro de pessoas
+  // Seletores do formulário de Pessoas (declarar ANTES de uso)
+
+  // Caches globais (declarar ANTES de uso)
+  let eventosCache = [];
+  let congregacoesCacheEvents = [];
+  let congregacoesByIdEvents = {};
+  let resultadosCache = [];
 
 
 
@@ -520,6 +525,33 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
     });
   }
 
+  // Listagem de Pessoas do Musical
+  function renderMusPessoas(){
+    if(!listaMusicalPessoas) return;
+    readList('musicalPessoas', list => {
+      const items = (list||[]).slice().sort((a,b)=> (a.nome||'').localeCompare(b.nome||'', undefined, { sensitivity:'base' }));
+      if(!items.length){ listaMusicalPessoas.innerHTML = '<div class="text-muted">Nenhuma pessoa cadastrada</div>'; return; }
+      listaMusicalPessoas.innerHTML = items.map(p => {
+        const cat = p.categoria || '-';
+        const inst = p.categoria==='Instrutor' ? ` • ${p.instrumento||'-'} (${p.tonalidade||'-'})` : '';
+        return `<div class="list-item"><div class="list-item-info"><strong>${p.nome||''}</strong> — ${cat}${inst}</div></div>`;
+      }).join('');
+    });
+  }
+
+
+  const formMusPessoa = qs('#form-musical-pessoa');
+  const musPessoaNomeInp = qs('#mus-pessoa-nome');
+  const musPessoaCategoriaSel = qs('#mus-pessoa-categoria');
+  const musPessoaCongSel = qs('#mus-pessoa-congregacao');
+  const musInstrumentoWrap = qs('#mus-instrumento-wrap');
+  const musTonalidadeWrap = qs('#mus-tonalidade-wrap');
+  const musInstrumentoInp = qs('#mus-instrumento');
+  const musTonalidadeInp = qs('#mus-tonalidade');
+  const listaMusicalPessoas = qs('#lista-musical-pessoas');
+
+  try{ renderMusPessoas(); }catch{}
+
   // Cadastro de Pessoas do Musical
   if(formMusPessoa){
     formMusPessoa.addEventListener('submit', async (e)=>{
@@ -536,30 +568,6 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
       }catch(err){ console.error(err); toast('Falha ao salvar pessoa do musical', 'error'); }
     });
   }
-  // Listagem de Pessoas do Musical
-  function renderMusPessoas(){
-    if(!listaMusicalPessoas) return;
-    readList('musicalPessoas', list => {
-      const items = (list||[]).slice().sort((a,b)=> (a.nome||'').localeCompare(b.nome||'', undefined, { sensitivity:'base' }));
-      if(!items.length){ listaMusicalPessoas.innerHTML = '<div class="text-muted">Nenhuma pessoa cadastrada</div>'; return; }
-      listaMusicalPessoas.innerHTML = items.map(p => {
-        const cat = p.categoria || '-';
-        const inst = p.categoria==='Instrutor' ? ` • ${p.instrumento||'-'} (${p.tonalidade||'-'})` : '';
-        return `<div class="list-item"><div class="list-item-info"><strong>${p.nome||''}</strong> — ${cat}${inst}</div></div>`;
-      }).join('');
-    });
-  }
-  try{ renderMusPessoas(); }catch{}
-
-  const formMusPessoa = qs('#form-musical-pessoa');
-  const musPessoaNomeInp = qs('#mus-pessoa-nome');
-  const musPessoaCategoriaSel = qs('#mus-pessoa-categoria');
-  const musPessoaCongSel = qs('#mus-pessoa-congregacao');
-  const musInstrumentoWrap = qs('#mus-instrumento-wrap');
-  const musTonalidadeWrap = qs('#mus-tonalidade-wrap');
-  const musInstrumentoInp = qs('#mus-instrumento');
-  const musTonalidadeInp = qs('#mus-tonalidade');
-  const listaMusicalPessoas = qs('#lista-musical-pessoas');
 
   // Inicialização da aba Musical: preencher congregações e selects
   (function initMusical(){
@@ -690,10 +698,6 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
   btnRelApply && btnRelApply.addEventListener('click', (e)=>{ e.preventDefault(); applyRelFiltersFetch(); });
 btnRelClear && btnRelClear.addEventListener('click', ()=>{ relEventosFilteredCache = null; });
 btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYearSel.value=''; if(relMonthSel) relMonthSel.value=''; if(relCidadeSel) relCidadeSel.value=''; if(relBairroSel) relBairroSel.value=''; if(relEnsaiosSortSel) relEnsaiosSortSel.value='cidade'; if(relEnsaiosNextOnly) relEnsaiosNextOnly.checked=false; if(relTipoSel) relTipoSel.value=''; if(typeof renderRelatorios==='function') renderRelatorios(); });
-  let eventosCache = [];
-  let congregacoesCacheEvents = [];
-  let congregacoesByIdEvents = {};
-  let resultadosCache = [];
 
   function toggleAtendenteManual(enable){
     const on = !!enable;
