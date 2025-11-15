@@ -59,9 +59,48 @@
             <button type="button" id="mus-ensaio-addtype-btn" class="btn btn-outline-primary btn-sm" title="Adicionar outro tipo">+</button>
           </div>
         </label>
+        <!-- Recorrência -->
+        <label>
+          Ano (recorrência)
+          <select id="mus-rec-ano">
+            <option value="">Selecionar...</option>
+          </select>
+        </label>
+        <label>
+          Dia da Semana
+          <select id="mus-rec-dia">
+            <option value="">Selecionar...</option>
+            <option value="0">Domingo</option>
+            <option value="1">Segunda-feira</option>
+            <option value="2">Terça-feira</option>
+            <option value="3">Quarta-feira</option>
+            <option value="4">Quinta-feira</option>
+            <option value="5">Sexta-feira</option>
+            <option value="6">Sábado</option>
+          </select>
+        </label>
+        <label>
+          Semana do Mês
+          <select id="mus-rec-semana">
+            <option value="">Selecionar...</option>
+            <option value="1">1ª semana</option>
+            <option value="2">2ª semana</option>
+            <option value="3">3ª semana</option>
+            <option value="4">4ª semana</option>
+            <option value="5">5ª semana</option>
+            <option value="last">Última semana</option>
+          </select>
+        </label>
+        <label class="full">
+          Meses que se repete
+          <div id="mus-rec-meses" class="d-flex flex-wrap gap-2">
+            <!-- preenchido dinamicamente -->
+          </div>
+        </label>
+        <!-- Avulso (opcional) -->
         <label>
           Data
-          <input type="date" id="mus-ensaio-data" name="data" required />
+          <input type="date" id="mus-ensaio-data" name="data" />
         </label>
         <label>
           Horário

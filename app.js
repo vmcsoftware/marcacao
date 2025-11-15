@@ -281,6 +281,35 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
   const musEnsaioHoraInp = qs('#mus-ensaio-hora');
   const musEnsaioObsTxt = qs('#mus-ensaio-obs');
 
+  // Novos seletores de recorrência (agenda de ensaios)
+  const musRecAnoSel = qs('#mus-rec-ano');
+  const musRecDiaSel = qs('#mus-rec-dia');
+  const musRecSemanaSel = qs('#mus-rec-semana');
+  const musRecMesesWrap = qs('#mus-rec-meses');
+
+  // Helpers de data para recorrência de ensaios
+  function toYmdLocal(d){
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
+  }
+  function getNthWeekdayOfMonth(year, month/*1-12*/, weekday/*0-6*/, nth/*1-5*/){
+    const first = new Date(year, month-1, 1);
+    const offset = (weekday - first.getDay() + 7) % 7;
+    const day = 1 + offset + (nth-1)*7;
+    const cand = new Date(year, month-1, day);
+    if (cand.getMonth() !== (month-1)) return null;
+    return toYmdLocal(cand);
+  }
+  function getLastWeekdayOfMonth(year, month/*1-12*/, weekday/*0-6*/){
+    const last = new Date(year, month, 0); // último dia do mês
+    const offset = (last.getDay() - weekday + 7) % 7;
+    const day = last.getDate() - offset;
+    const cand = new Date(year, month-1, day);
+    return toYmdLocal(cand);
+  }
+
   // Tipos de Ensaio customizados (localStorage) para Musical
   function getCustomEnsaioTypesMus(){
     try{ return JSON.parse(localStorage.getItem('ensaioTiposCustom')||'[]'); }catch{ return []; }
@@ -319,35 +348,87 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
   renderCustomEnsaioTypesMus();
   setupMusEnsaioTipoAdder();
 
-  // Submissão de Ensaios (Musical) => salva em 'eventos' como tipo 'Ensaio'
-  if(formEnsaioMusical){
+  // Handler de submit do formulário de Cadastro de Ensaios (Musical)
+  if (formEnsaioMusical){
     formEnsaioMusical.addEventListener('submit', async (e)=>{
       e.preventDefault();
       try{
-        const congregacaoId = (musCongSel && musCongSel.value) || '';
-        const ensaioTipo = (musEnsaioTipoSel && musEnsaioTipoSel.value) || '';
-        const data = (musEnsaioDataInp && musEnsaioDataInp.value) || '';
-        const hora = (musEnsaioHoraInp && musEnsaioHoraInp.value) || '';
-        const observacoes = (musEnsaioObsTxt && musEnsaioObsTxt.value) || '';
-        if(!congregacaoId || !ensaioTipo || !data){ toast('Preencha Congregação, Tipo e Data', 'error'); return; }
+        const congregacaoId = musCongSel ? musCongSel.value : '';
+        if(!congregacaoId){ toast('Selecione uma congregação', 'error'); return; }
+        const congregacaoNome = (congregacoesByIdEvents && congregacoesByIdEvents[congregacaoId] && (congregacoesByIdEvents[congregacaoId].nome || '')) || (musCongSel && musCongSel.options && musCongSel.options[musCongSel.selectedIndex] && musCongSel.options[musCongSel.selectedIndex].text) || '';
+        const ensaioTipo = musEnsaioTipoSel ? musEnsaioTipoSel.value : '';
+        if(!ensaioTipo){ toast('Selecione o tipo de ensaio', 'error'); return; }
 
-        const congregacaoNome =
-          (congregacoesByIdEvents && congregacoesByIdEvents[congregacaoId] && (congregacoesByIdEvents[congregacaoId].nome || '')) ||
-          ((musCongSel && musCongSel.options && musCongSel.options[musCongSel.selectedIndex] && musCongSel.options[musCongSel.selectedIndex].text) || '');
+        const hora = musEnsaioHoraInp ? (musEnsaioHoraInp.value || '') : '';
+        const obs = musEnsaioObsTxt ? (musEnsaioObsTxt.value || '') : '';
+        const dataAvulsa = musEnsaioDataInp ? (musEnsaioDataInp.value || '') : '';
 
-        const evento = {
-          tipo: 'Ensaio',
-          ensaioTipo,
-          congregacaoId,
-          congregacaoNome,
-          data,
-          hora,
-          observacoes
-        };
+        // Recorrência
+        const recAno = musRecAnoSel && musRecAnoSel.value ? parseInt(musRecAnoSel.value,10) : null;
+        const recDia = musRecDiaSel && musRecDiaSel.value ? parseInt(musRecDiaSel.value,10) : null; // 0..6
+        const recSemana = musRecSemanaSel && musRecSemanaSel.value ? musRecSemanaSel.value : null; // '1'..'5' ou 'last'
+        const recMeses = musRecMesesWrap ? Array.from(musRecMesesWrap.querySelectorAll('input[name="mus-rec-meses"]:checked')).map(i=>parseInt(i.value,10)) : [];
 
-        const saved = await write('eventos', evento);
-        if(saved){ toast('Ensaio cadastrado'); formEnsaioMusical.reset(); renderMusAgenda(); }
-      }catch(err){ console.error(err); toast('Falha ao salvar ensaio', 'error'); }
+        let datasGeradas = [];
+
+        if (recAno && recDia!==null && recSemana && recMeses.length){
+          datasGeradas = recMeses.map(m => {
+            if(recSemana === 'last') return getLastWeekdayOfMonth(recAno, m, recDia);
+            const nth = parseInt(recSemana,10);
+            return getNthWeekdayOfMonth(recAno, m, recDia, nth);
+          }).filter(Boolean);
+          if (!datasGeradas.length){ toast('Nenhuma data encontrada para a recorrência selecionada', 'error'); return; }
+        } else if (dataAvulsa){
+          datasGeradas = [dataAvulsa];
+        } else {
+          toast('Informe data avulsa ou complete os campos de recorrência', 'error');
+          return;
+        }
+
+        // Gravação: se em edição, atualiza apenas um; caso contrário, cria todos
+        const editId = formEnsaioMusical.dataset.editId;
+        if (editId){
+          const evento = {
+            tipo: 'Ensaio',
+            ensaioTipo,
+            congregacaoId,
+            congregacaoNome,
+            data: datasGeradas[0],
+            hora,
+            observacoes: obs
+          };
+          await update('eventos', editId, evento);
+          delete formEnsaioMusical.dataset.editId;
+          const submitBtn = formEnsaioMusical.querySelector('button[type="submit"]');
+          const resetBtn = formEnsaioMusical.querySelector('button[type="reset"]');
+          if(submitBtn) submitBtn.textContent = 'Salvar Ensaio';
+          if(resetBtn) resetBtn.textContent = 'Limpar';
+          toast('Ensaio atualizado');
+        } else {
+          await Promise.all(datasGeradas.map(data => {
+            const evento = {
+              tipo: 'Ensaio',
+              ensaioTipo,
+              congregacaoId,
+              congregacaoNome,
+              data,
+              hora,
+              observacoes: obs
+            };
+            return write('eventos', evento);
+          }));
+          toast(`${datasGeradas.length} ensaio(s) cadastrado(s)`);
+        }
+
+        // Re-renderiza agenda pós-salvar
+        try{ renderMusAgenda(); }catch{}
+
+        // Reset do formulário
+        formEnsaioMusical.reset();
+      }catch(err){
+        console.error(err);
+        toast('Falha ao salvar ensaio', 'error');
+      }
     });
   }
 
@@ -514,6 +595,27 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
       const months = ['Todos','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
       const now = new Date(); const m = now.getMonth()+1;
       musAgendaMonthSel.innerHTML = months.map((label,i)=> i===0 ? `<option value="">${label}</option>` : `<option value="${i}" ${i===m?'selected':''}>${label}</option>`).join('');
+    }
+
+    // Preencher anos e meses (recorrência)
+    if (musRecAnoSel){
+      const now = new Date();
+      const base = now.getFullYear();
+      const anos = [base-1, base, base+1, base+2];
+      musRecAnoSel.innerHTML = ['<option value="">Selecionar...</option>']
+        .concat(anos.map(a => `<option value="${a}">${a}</option>`))
+        .join('');
+      musRecAnoSel.value = String(base);
+    }
+    if (musRecMesesWrap){
+      const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+      musRecMesesWrap.innerHTML = meses.map((label, idx) => {
+        const val = idx+1;
+        return `<label class="form-check form-check-inline">
+          <input type="checkbox" class="form-check-input" name="mus-rec-meses" value="${val}">
+          <span class="form-check-label">${label}</span>
+        </label>`;
+      }).join('');
     }
   })();
 
