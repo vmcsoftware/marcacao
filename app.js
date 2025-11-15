@@ -324,36 +324,29 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
     formEnsaioMusical.addEventListener('submit', async (e)=>{
       e.preventDefault();
       try{
-        const congId = musCongSel && musCongSel.value || '';
-        const ensTipo = musEnsaioTipoSel && musEnsaioTipoSel.value || '';
-        const data = musEnsaioDataInp && musEnsaioDataInp.value || '';
-        const horario = musEnsaioHoraInp && musEnsaioHoraInp.value || '';
-        const observacoes = musEnsaioObsTxt && musEnsaioObsTxt.value || '';
-        if(!congId || !ensTipo || !data){ toast('Preencha Congregação, Tipo e Data', 'error'); return; }
+        const congregacaoId = (musCongSel && musCongSel.value) || '';
+        const ensaioTipo = (musEnsaioTipoSel && musEnsaioTipoSel.value) || '';
+        const data = (musEnsaioDataInp && musEnsaioDataInp.value) || '';
+        const hora = (musEnsaioHoraInp && musEnsaioHoraInp.value) || '';
+        const observacoes = (musEnsaioObsTxt && musEnsaioObsTxt.value) || '';
+        if(!congregacaoId || !ensaioTipo || !data){ toast('Preencha Congregação, Tipo e Data', 'error'); return; }
 
-        // Label de congregação vindo do banco (com fallback ao texto do select)
-        let congregacaoNome = '';
-        try{
-          const congObj = (congregacoesByIdEvents||{})[congId];
-          congregacaoNome = congObj
-            ? (congObj.nomeFormatado || (congObj.cidade && congObj.bairro ? `${congObj.cidade} - ${congObj.bairro}` : (congObj.nome||'')))
-            : '';
-          if(!congregacaoNome && musCongSel){
-            const opt = musCongSel.options[musCongSel.selectedIndex];
-            congregacaoNome = opt ? opt.text : '';
-          }
-        }catch{}
+        const congregacaoNome =
+          (congregacoesByIdEvents && congregacoesByIdEvents[congregacaoId] && (congregacoesByIdEvents[congregacaoId].nome || '')) ||
+          ((musCongSel && musCongSel.options && musCongSel.options[musCongSel.selectedIndex] && musCongSel.options[musCongSel.selectedIndex].text) || '');
 
-        const saved = await write('eventos', {
+        const evento = {
           tipo: 'Ensaio',
-          data,
-          congregacaoId: congId,
+          ensaioTipo,
+          congregacaoId,
           congregacaoNome,
-          ensaioTipo: ensTipo,
-          horario,
+          data,
+          hora,
           observacoes
-        });
-        if(saved){ toast('Ensaio salvo'); formEnsaioMusical.reset(); renderMusAgenda(); }
+        };
+
+        const saved = await write('eventos', evento);
+        if(saved){ toast('Ensaio cadastrado'); formEnsaioMusical.reset(); renderMusAgenda(); }
       }catch(err){ console.error(err); toast('Falha ao salvar ensaio', 'error'); }
     });
   }
@@ -363,7 +356,7 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
     if(!musAgendaBody) return;
     const ySel = musAgendaYearSel && musAgendaYearSel.value ? parseInt(musAgendaYearSel.value,10) : null;
     const mSel = musAgendaMonthSel && musAgendaMonthSel.value ? parseInt(musAgendaMonthSel.value,10) : null;
-    const list = (eventosCache||[])
+    const ensaiosFiltrados = (eventosCache||[])
       .filter(ev => ev && ev.tipo==='Ensaio')
       .filter(ev=>{
         const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
@@ -378,27 +371,23 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
         const bd = parseDateYmdLocal(b.data) || new Date(b.data);
         return ad - bd;
       });
-    if(!list.length){ musAgendaBody.innerHTML = '<tr><td colspan="5" class="text-muted">Nenhum ensaio cadastrado</td></tr>'; return; }
-    const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-    musAgendaBody.innerHTML = list.map(ev=>{
-      const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
-      const diaNome = diasSemanaPt[d.getDay()];
-      const dataFmt = `${diaNome} - ${formatDate(ev.data)}`;
-      const hora = ev.hora || '-';
-      const cong = congregacoesByIdEvents && congregacoesByIdEvents[ev.congregacaoId];
-      const localLabel = ev.congregacaoNome || (cong ? (cong.nomeFormatado || (cong.cidade && cong.bairro ? `${cong.cidade} - ${cong.bairro}` : (cong.nome||ev.congregacaoId))) : ev.congregacaoId);
-      const tipo = ev.ensaioTipo || '-';
-      return `<tr>
-        <td>${dataFmt}</td>
-        <td>${hora}</td>
-        <td>${localLabel}</td>
-        <td>${tipo}</td>
+    if(!ensaiosFiltrados.length){ musAgendaBody.innerHTML = '<tr><td colspan="5" class="text-muted">Nenhum ensaio cadastrado</td></tr>'; return; }
+
+    const rows = ensaiosFiltrados.map(e => {
+      const localNome = e.congregacaoNome || ((congregacoesByIdEvents && congregacoesByIdEvents[e.congregacaoId] && (congregacoesByIdEvents[e.congregacaoId].nome || '')) || '');
+      return `<tr data-id="${e.id}">
+        <td>${e.data || ''}</td>
+        <td>${e.hora || '-'}</td>
+        <td>${localNome}</td>
+        <td>${e.ensaioTipo || '-'}</td>
         <td>
-          <button class="btn btn-sm btn-outline-primary" data-action="edit-ensaio" data-id="${ev.id}">Editar</button>
-          <button class="btn btn-sm btn-danger ms-2" data-action="delete-ensaio" data-id="${ev.id}">Excluir</button>
+          <button class="btn btn-sm btn-outline-primary btn-edit" data-action="edit-ensaio" data-id="${e.id}">Editar</button>
+          <button class="btn btn-sm btn-danger ms-2 btn-del" data-action="delete-ensaio" data-id="${e.id}">Excluir</button>
         </td>
       </tr>`;
     }).join('');
+
+    musAgendaBody.innerHTML = rows;
   }
   if(musAgendaYearSel){ musAgendaYearSel.addEventListener('change', ()=>{ try{ renderMusAgenda(); }catch{} }); }
   if(musAgendaMonthSel){ musAgendaMonthSel.addEventListener('change', ()=>{ try{ renderMusAgenda(); }catch{} }); }
@@ -487,23 +476,22 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
 
   // Inicialização da aba Musical: preencher congregações e selects
   (function initMusical(){
-    if(musCongSel || musPessoaCongSel){
+    if (musCongSel || musPessoaCongSel) {
       readList('congregacoes', list => {
-        // Atualiza caches globais para uso na Musical e demais páginas
-        congregacoesCacheEvents = list;
+        // Atualiza caches globais usados em eventos e agenda musical
+        congregacoesCacheEvents = (list || []).slice().sort((a, b) => (a && a.nome ? a.nome : '').localeCompare(b && b.nome ? b.nome : '', undefined, { sensitivity: 'base' }));
         congregacoesByIdEvents = {};
-        (list||[]).forEach(c => { if(c && c.id) congregacoesByIdEvents[c.id] = c; });
+        congregacoesCacheEvents.forEach(c => { if (c && c.id) congregacoesByIdEvents[c.id] = c; });
 
-        const makeLabel = (x) => x.nomeFormatado || (x.cidade && x.bairro ? `${x.cidade} - ${x.bairro}` : (x.nome||''));
-        const sorted = [...(list||[])].sort((a,b)=> (makeLabel(a)||'').localeCompare(makeLabel(b)||'', undefined, { sensitivity: 'base' }));
-        if(musCongSel){
-          musCongSel.innerHTML = '<option value="">Selecionar...</option>' + sorted.map(c=> `<option value="${c.id}">${makeLabel(c)}</option>`).join('');
-        }
-        if(musPessoaCongSel){
-          musPessoaCongSel.innerHTML = '<option value="">Selecionar...</option>' + sorted.map(c=> `<option value="${c.id}">${makeLabel(c)}</option>`).join('');
-        }
-        // Atualiza a agenda ao carregar congregações
-        try{ renderMusAgenda(); }catch{}
+        const optsHtml = ['<option value="">Selecione</option>']
+          .concat(congregacoesCacheEvents.map(c => `<option value="${c.id}">${c.nome}</option>`))
+          .join('');
+
+        if (musCongSel) musCongSel.innerHTML = optsHtml;
+        if (musPessoaCongSel) musPessoaCongSel.innerHTML = optsHtml;
+
+        // Re-renderiza a agenda após o carregamento das congregações
+        if (musAgendaBody) renderMusAgenda();
       });
     }
     if(musEnsaioTipoSel){ renderCustomEnsaioTypesMus(); setupMusEnsaioTipoAdder(); }
@@ -1125,4 +1113,3 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
     });
   }
 })();
-º
