@@ -549,7 +549,7 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
           const container = congBtn.closest('.list-item');
           const details = container ? container.querySelector('.list-details') : null;
           if(!details){ return; }
-          // Encontrar o último agendamento cadastrado (por createdAt) para esta congregação
+          // Encontrar o último reforço cadastrado (CO/RJM) para esta congregação
           const getTime = (ev) => {
             try{
               const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
@@ -557,18 +557,18 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
             }catch{ return 0; }
           };
           const last = (eventosCache||[])
-            .filter(ev => ev && ev.congregacaoId === congId)
+            .filter(ev => ev && ev.congregacaoId === congId && (ev.tipo === 'Culto Reforço de Coletas' || ev.tipo === 'RJM com Reforço de Coletas'))
             .sort((a,b)=> getTime(b) - getTime(a))
             [0];
-          if(!last){ details.innerHTML = '<div class="meta text-muted">Nenhum agendamento encontrado para esta congregação.</div>'; details.classList.remove('hidden'); return; }
-          // Montar detalhes compactos do último agendamento
+          if(!last){ details.innerHTML = '<div class="meta text-muted">Nenhum reforço encontrado para esta congregação.</div>'; details.classList.remove('hidden'); return; }
+          // Montar detalhes compactos do último reforço
           const tipo = last.tipo + (last.ensaioTipo ? ` - ${last.ensaioTipo}` : '');
           const dataFmt = formatDate(last.data);
           const hora = horaDoEvento(last);
           const atendente = last.atendenteNome || '-';
           const obs = last.observacoes ? `<div class="meta">Obs: ${last.observacoes}</div>` : '';
           const html = `
-            <div class="meta">Último agendamento: <strong>${tipo}</strong></div>
+            <div class="meta">Último reforço: <strong>${tipo}</strong></div>
             <div class="meta">Data/Hora: ${dataFmt} ${hora && hora!=='-' ? `às ${hora}` : ''}</div>
             <div class="meta">Quem atende: ${atendente}</div>
             ${obs}
@@ -681,13 +681,17 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
   if(btnImprimirEventos){
     btnImprimirEventos.addEventListener('click', ()=>{
       try{
-        const reforcos = (eventosCache||[]).slice().sort((a,b)=>{
-          const ad = parseDateYmdLocal(a.data) || new Date(a.data);
-          const bd = parseDateYmdLocal(b.data) || new Date(b.data);
-          return ad - bd;
-        });
+        // Somente reforços (CO/RJM)
+        const reforcos = (eventosCache||[])
+          .filter(ev => ev.tipo==='Culto Reforço de Coletas' || ev.tipo==='RJM com Reforço de Coletas')
+          .slice()
+          .sort((a,b)=>{
+            const ad = parseDateYmdLocal(a.data) || new Date(a.data);
+            const bd = parseDateYmdLocal(b.data) || new Date(b.data);
+            return ad - bd;
+          });
         if(!reforcos.length){
-          toast('Nenhum atendimento cadastrado para imprimir', 'error');
+          toast('Nenhum reforço cadastrado para imprimir', 'error');
           return;
         }
         const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
@@ -772,12 +776,16 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
   if(btnExportarPdfEventos){
     btnExportarPdfEventos.addEventListener('click', ()=>{
       try{
-        const reforcos = (eventosCache||[]).slice().sort((a,b)=>{
-          const ad = parseDateYmdLocal(a.data) || new Date(a.data);
-          const bd = parseDateYmdLocal(b.data) || new Date(b.data);
-          return ad - bd;
-        });
-        if(!reforcos.length){ toast('Nenhum atendimento para exportar', 'error'); return; }
+        // Somente reforços (CO/RJM)
+        const reforcos = (eventosCache||[])
+          .filter(ev => ev.tipo==='Culto Reforço de Coletas' || ev.tipo==='RJM com Reforço de Coletas')
+          .slice()
+          .sort((a,b)=>{
+            const ad = parseDateYmdLocal(a.data) || new Date(a.data);
+            const bd = parseDateYmdLocal(b.data) || new Date(b.data);
+            return ad - bd;
+          });
+        if(!reforcos.length){ toast('Nenhum reforço para exportar', 'error'); return; }
         const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
         const rowsHtml = reforcos.map(ev => {
           const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
@@ -846,12 +854,16 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
   if(btnExportarXlsEventos){
     btnExportarXlsEventos.addEventListener('click', ()=>{
       try{
-        const reforcos = (eventosCache||[]).slice().sort((a,b)=>{
-          const ad = parseDateYmdLocal(a.data) || new Date(a.data);
-          const bd = parseDateYmdLocal(b.data) || new Date(b.data);
-          return ad - bd;
-        });
-        if(!reforcos.length){ toast('Nenhum atendimento para exportar', 'error'); return; }
+        // Somente reforços (CO/RJM)
+        const reforcos = (eventosCache||[])
+          .filter(ev => ev.tipo==='Culto Reforço de Coletas' || ev.tipo==='RJM com Reforço de Coletas')
+          .slice()
+          .sort((a,b)=>{
+            const ad = parseDateYmdLocal(a.data) || new Date(a.data);
+            const bd = parseDateYmdLocal(b.data) || new Date(b.data);
+            return ad - bd;
+          });
+        if(!reforcos.length){ toast('Nenhum reforço para exportar', 'error'); return; }
         const diasSemanaPt = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
         const rowsHtml = reforcos.map(ev => {
           const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
@@ -2907,6 +2919,13 @@ ${tableHtml}
           const items = e.datas.slice().sort((a,b)=> (a.mes||0)-(b.mes||0)).map(d=> `${mesesNomes[(d.mes||1)-1]||d.mes}: ${fmt(d.data)}`).join(', ');
           return `<div class="meta ensaio-line">Datas de Ensaio: ${items}</div>`;
         })();
+        // Botão de excluir ensaio (visível somente se houver ensaio)
+        const hasEnsaio = !!c.ensaio && (
+          Array.isArray(c.ensaio.tipos) ? c.ensaio.tipos.length > 0 : !!c.ensaio.tipo
+        );
+        const deleteEnsaioBtn = hasEnsaio
+          ? `<button class="btn btn-sm btn-outline-warning" data-action="delete-ensaio" data-id="${c.id}">Excluir Ensaio</button>`
+          : '';
         return `
           <div class="item cong-item" data-id="${c.id}">
             <div class="cong-header">
@@ -2924,6 +2943,7 @@ ${tableHtml}
               ${ensaioDatasLine}
               <div class="cong-actions">
                 <button class="btn btn-sm btn-outline-secondary" data-action="edit-cong" data-id="${c.id}">Editar</button>
+                ${deleteEnsaioBtn}
                 <button class="btn btn-sm btn-outline-danger" data-action="delete-cong" data-id="${c.id}">Excluir</button>
               </div>
             </div>
@@ -3035,8 +3055,46 @@ ${tableHtml}
           if(details){ details.classList.toggle('hidden'); }
           return; // não propagar para outras ações
         }
+        const btnDelEnsaio = e.target.closest('button[data-action="delete-ensaio"]');
         const btnDel = e.target.closest('button[data-action="delete-cong"]');
         const btnEdit = e.target.closest('button[data-action=\"edit-cong\"]');
+        if(btnDelEnsaio){
+          const id = btnDelEnsaio.getAttribute('data-id');
+          const c = (congregacoesCache||[]).find(x=>x.id===id);
+          if(!c) return;
+          const ok = confirm('Deseja excluir os dados de Ensaio desta congregação?');
+          if(!ok) return;
+          try{
+            await update('congregacoes', id, { ensaio: null });
+            toast('Ensaio da congregação removido');
+            if(formCong && formCong.dataset && formCong.dataset.editId === id){
+              const ensTiposWrap = qs('#ensaio-tipos');
+              if(ensTiposWrap){ Array.from(ensTiposWrap.querySelectorAll('input[name="ensaioTipo"]')).forEach(ch=> ch.checked=false); }
+              const ensHorarioInp = qs('#ensaio-horario');
+              if(ensHorarioInp) ensHorarioInp.value='';
+              const ensDiaSel = qs('#ensaio-dia');
+              if(ensDiaSel) ensDiaSel.value='';
+              const ensSemanaSel = qs('#ensaio-semana');
+              if(ensSemanaSel) ensSemanaSel.value='';
+              const ensAnoInp = qs('#ensaio-ano');
+              if(ensAnoInp) ensAnoInp.value='';
+              const ensMesesWrap = qs('#ensaio-meses');
+              if(ensMesesWrap){ Array.from(ensMesesWrap.querySelectorAll('input[name="ensaioMes"]')).forEach(ch=> ch.checked=false); }
+              if(ensEncLocalSel) ensEncLocalSel.value='';
+              if(ensEncRegRespSel) ensEncRegRespSel.value='';
+              if(ensExaminadoraSel) ensExaminadoraSel.value='';
+              try{ renderEnsaioPreview(); }catch{}
+            }
+            try{
+              congregacoesCache = (congregacoesCache||[]).map(x=> x.id===id ? ({...x, ensaio: null}) : x);
+              renderCongList();
+            }catch{}
+          }catch(err){
+            console.error(err);
+            toast('Falha ao excluir ensaio', 'error');
+          }
+          return;
+        }
         if(btnDel){
           const id = btnDel.getAttribute('data-id');
           const c = congregacoesCache.find(x=>x.id===id);
