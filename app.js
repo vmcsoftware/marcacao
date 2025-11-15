@@ -10,6 +10,18 @@
     setTimeout(()=>{ toastEl.className = 'toast'; }, 3000);
   }
 
+  // Converte 'YYYY-MM-DD' para Date no fuso local, evitando shift de timezone
+  function parseDateYmdLocal(ymd){
+    if(!ymd || typeof ymd !== 'string') return null;
+    const parts = ymd.split('-');
+    if(parts.length !== 3) return null;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const d = parseInt(parts[2], 10);
+    if(Number.isNaN(y) || Number.isNaN(m) || Number.isNaN(d)) return null;
+    return new Date(y, m - 1, d);
+  }
+
   // Tabs navegação
   const tabs = qsa('.tab');
   const panels = qsa('.tab-panel');
