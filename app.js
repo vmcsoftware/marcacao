@@ -22,6 +22,26 @@
     return new Date(y, m - 1, d);
   }
 
+  // Formata 'YYYY-MM-DD' como 'DD/MM/YYYY'
+  function formatDate(ymd){
+    try{
+      const d = parseDateYmdLocal(ymd) || new Date(ymd);
+      if(!d || isNaN(d.getTime())) return ymd || '';
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }catch{
+      return ymd || '';
+    }
+  }
+
+  // Obtém a hora do evento, com fallback
+  function horaDoEvento(ev){
+    if(!ev) return '';
+    return ev.hora || ev.horario || '';
+  }
+
   // Tabs navegação
   const tabs = qsa('.tab');
   const panels = qsa('.tab-panel');
