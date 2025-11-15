@@ -179,6 +179,66 @@ const tabelaAtendMocBody = qs('#tabela-atend-mocidade-body');
   // Filtro de tabela (Index): Ano/Mês
   const indexYearSel = qs('#index-year');
   const indexMonthSel = qs('#index-month');
+  // Barra de pendências (Ticker do próximo mês)
+  const tickerSemReforcoEl = qs('#ticker-sem-reforco');
+
+  // Ticker de pendências de Reforço (próximo mês)
+  function getNextMonthYear(){
+    const now = new Date();
+    const currentMonth = now.getMonth()+1; // 1-12
+    const nextMonth = currentMonth===12 ? 1 : currentMonth+1;
+    const nextYear = currentMonth===12 ? (now.getFullYear()+1) : now.getFullYear();
+    return { year: nextYear, month: nextMonth };
+  }
+  function escapeHtml(str){ return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  let _tickerTimer = null, _tickerMsgs = [], _tickerIndex = 0;
+  function startTicker(msgs){
+    if(!tickerSemReforcoEl) return;
+    _tickerMsgs = (msgs && msgs.length) ? msgs : ['Sem pendências para o próximo mês'];
+    _tickerIndex = 0;
+    showTickerItem();
+    if(_tickerTimer) clearInterval(_tickerTimer);
+    _tickerTimer = setInterval(()=>{
+      _tickerIndex = (_tickerIndex+1) % _tickerMsgs.length;
+      showTickerItem();
+    }, 4000);
+  }
+  function showTickerItem(){
+    if(!tickerSemReforcoEl) return;
+    const msg = _tickerMsgs[_tickerIndex] || '';
+    tickerSemReforcoEl.innerHTML = `<div class="ticker-item">${escapeHtml(msg)}</div>`;
+  }
+  function renderTickerSemReforco(){
+    if(!tickerSemReforcoEl) return;
+    const { year, month } = getNextMonthYear();
+    const msgs = [];
+    const listCong = congregacoesCacheEvents || [];
+    const evs = eventosCache || [];
+    const hasEvFor = (congId, tipoLabel) => {
+      return evs.some(ev => {
+        if(!ev || ev.congregacaoId!==congId) return false;
+        if(!(ev.tipo=== 'Culto Reforço de Coletas' || ev.tipo=== 'RJM com Reforço de Coletas')) return false;
+        if(tipoLabel==='CO' && ev.tipo!=='Culto Reforço de Coletas') return false;
+        if(tipoLabel==='RJM' && ev.tipo!=='RJM com Reforço de Coletas') return false;
+        const d = parseDateYmdLocal(ev.data) || new Date(ev.data);
+        return d && !isNaN(d.getTime()) && d.getFullYear()===year && (d.getMonth()+1)===month;
+      });
+    };
+    listCong.forEach(c => {
+      const label = c.nomeFormatado || (c.cidade && c.bairro ? `${c.cidade} - ${c.bairro}` : (c.nome||c.id));
+      const cultos = Array.isArray(c.cultos) ? c.cultos : [];
+      const temCO = cultos.some(ct => ct && ct.tipo==='Culto Oficial');
+      const temRJM = cultos.some(ct => ct && ct.tipo==='RJM');
+      const pend = [];
+      if(temCO && !hasEvFor(c.id, 'CO')) pend.push('CO');
+      if(temRJM && !hasEvFor(c.id, 'RJM')) pend.push('RJM');
+      if(pend.length){
+        msgs.push(`${label}: sem reforço ${pend.join(' e ')}`);
+      }
+    });
+    startTicker(msgs);
+  }
   // Relatórios
 const relEventosEl = qs('#relatorio-eventos');
 const relMinisterioEl = qs('#relatorio-ministerio');
@@ -514,6 +574,8 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
         }).join('');
       }
       renderTabelaReforcos();
+      // Atualiza ticker (próximo mês)
+      try{ renderTickerSemReforco(); }catch{}
     });
   // Inicializar selects de Ano/Mês na Index
   (function initIndexMonthYear(){
@@ -957,6 +1019,8 @@ btnRelClear && btnRelClear.addEventListener('click', ()=>{ if(relYearSel) relYea
       fillSelect(eventoCong, list, 'nomeFormatado');
       renderEventoCultosPreview(eventoCong.value||'');
       renderTabelaReforcos();
+      // Atualiza ticker (próximo mês)
+      try{ renderTickerSemReforco(); }catch{}
     });
     eventoCong.addEventListener('change', (e)=>{
       const congId = e.target.value || '';

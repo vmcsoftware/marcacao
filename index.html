@@ -347,3 +347,24 @@
   <script src="app.js"></script>
 </body>
 </html>
+<!-- Barra de pendências (próximo mês) -->
+<div id="ticker-sem-reforco" aria-live="polite" title="Congregações sem reforço no próximo mês"
+     style="width:100%; white-space:nowrap; overflow:hidden; border:1px solid #f5d98e; background:#fff9e6; color:#a56600; border-radius:6px; padding:6px 10px; margin:8px 0;">
+  <span class="text-muted">Carregando pendências de reforço do próximo mês...</span>
+</div>
+<table class="table table-sm" id="tabela-reforcos">
+  <thead>
+    <tr>
+      <th>Data</th>
+      <th>Hora</th>
+      <th>Local</th>
+      <th>Quem atende</th>
+      <th>Tipo</th>
+    </tr>
+  </thead>
+  <tbody id="tabela-reforcos-body">
+    <tr>
+      <td colspan="5" class="text-muted">Nenhum atendimento cadastrado</td>
+    </tr>
+  </tbody>
+</table>
