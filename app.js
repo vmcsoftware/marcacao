@@ -159,6 +159,56 @@
   const btnImprimirEventos = qs('#btn-imprimir-eventos');
   const btnExportarPdfEventos = qs('#btn-exportar-pdf-eventos');
   const btnExportarXlsEventos = qs('#btn-exportar-xls-eventos');
+
+  // Renderizar tabela de Reforços (Index)
+  function renderTabelaReforcos(){
+    if(!tabelaReforcosBody) return;
+
+    const ySel = indexYearSel && indexYearSel.value ? parseInt(indexYearSel.value,10) : null;
+    const mSel = indexMonthSel && indexMonthSel.value ? parseInt(indexMonthSel.value,10) : null;
+
+    const isReforco = (ev) => ev && (ev.tipo === 'Culto Reforço de Coletas' || ev.tipo === 'RJM com Reforço de Coletas');
+    const parseD = (dstr) => { try{ return (typeof parseDateYmdLocal==='function' ? (parseDateYmdLocal(dstr) || new Date(dstr)) : new Date(dstr)); }catch{ return null; } };
+
+    const filtered = (eventosCache||[])
+      .filter(isReforco)
+      .filter(ev=>{
+        const d = parseD(ev.data);
+        if(!d || isNaN(d.getTime())) return false;
+        if(ySel && d.getFullYear() !== ySel) return false;
+        if(mSel && (d.getMonth()+1) !== mSel) return false;
+        return true;
+      })
+      .slice()
+      .sort((a,b)=>{
+        const ad = parseD(a.data); const bd = parseD(b.data);
+        return (ad?.getTime()||0) - (bd?.getTime()||0);
+      });
+
+    if(!filtered.length){
+      tabelaReforcosBody.innerHTML = '<tr><td colspan="5" class="text-muted">Nenhum reforço de coletas encontrado</td></tr>';
+      return;
+    }
+
+    const rows = filtered.map(ev=>{
+      const dataFmt = typeof formatDate==='function' ? formatDate(ev.data) : (ev.data || '');
+      const hora = typeof horaDoEvento==='function' ? (horaDoEvento(ev) || '-') : (ev.hora || '-');
+      const local = labelCong(ev);
+      const atendente = ev.atendenteNome || '-';
+      const tipo = ev.tipo + (ev.ensaioTipo ? ` - ${ev.ensaioTipo}` : '');
+      return `
+        <tr data-id="${ev.id}">
+          <td>${dataFmt}</td>
+          <td>${hora}</td>
+          <td>${local}</td>
+          <td>${atendente}</td>
+          <td>${tipo}</td>
+        </tr>
+      `;
+    }).join('');
+
+    tabelaReforcosBody.innerHTML = rows;
+  }
   // Atendimentos (nova página)
   const formAtendimento = qs('#form-atendimento');
   const atendCongSel = qs('#atend-congregacao');
