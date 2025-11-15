@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Administração CCB Ituiutaba - Musical</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-light">
+  <header class="app-header bg-white shadow-sm">
+    <div class="container header-content">
+      <div class="brand">
+        <div>
+          <h1>Administração CCB Ituiutaba</h1>
+          <p>Musical</p>
+        </div>
+      </div>
+      <nav class="tabs nav nav-tabs" role="tablist">
+        <a class="nav-link tab" href="index.html" id="tab-btn-eventos"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 10h10v2H7zm0 4h7v2H7z" fill="currentColor"/><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" fill="currentColor"/></svg></span> Reforço de Coletas</a>
+        <a class="nav-link tab" href="atendimentos.html" id="tab-btn-atendimentos"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3h18v4H3zM3 9h18v12H3z" fill="currentColor"/></svg></span> Marcação de Atendimentos</a>
+        <a class="nav-link tab" href="ministerio.html" id="tab-btn-ministerio"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.33 0-8 2.17-8 5v1h16v-1c0-2.83-3.67-5-8-5z" fill="currentColor"/></svg></span> Ministério</a>
+        <a class="nav-link tab" href="congregacoes.html" id="tab-btn-congregacoes"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l9 7-1.5 2L12 7 4.5 12 3 10z" fill="currentColor"/><path d="M5 13v7h5v-4h4v4h5v-7l-7-5z" fill="currentColor"/></svg></span> Congregações</a>
+        <a class="nav-link tab" href="relatorios.html" id="tab-btn-relatorios"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 13h6v8H3zm12-10h6v18h-6zM9 3h6v18H9z" fill="currentColor"/></svg></span> Relatórios</a>
+        <a class="nav-link tab active" href="musical.html" id="tab-btn-musical" aria-selected="true"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 3v12.26A3 3 0 1 0 11 18V8h7V3H9z" fill="currentColor"/></svg></span> Musical</a>
+      </nav>
+    </div>
+  </header>
+
+  <section id="config-alert" class="alert hidden" role="alert">
+    As chaves do Firebase não estão configuradas. Abra o arquivo config.js e insira sua configuração do Firebase para habilitar o salvamento em tempo real.
+  </section>
+
+  <main class="content container my-3">
+    <!-- Cadastro de Ensaios -->
+    <section class="card shadow-sm p-3 mb-3">
+      <h2>Cadastro de Ensaios</h2>
+      <form id="form-ensaio-musical" class="form-grid">
+        <label>
+          Congregação
+          <select id="mus-congregacao" name="congregacaoId" required>
+            <option value="">Selecionar...</option>
+          </select>
+        </label>
+        <label>
+          Tipo de Ensaio
+          <div class="d-flex align-items-center gap-2">
+            <select id="mus-ensaio-tipo" name="ensaioTipo" required>
+              <option value="">Selecionar...</option>
+              <option value="Local">Local</option>
+              <option value="Regional">Regional</option>
+              <option value="Ensaio GEM">Ensaio GEM</option>
+              <option value="Ensaio DARPE">Ensaio DARPE</option>
+              <option value="Ensaio Geral por Família">Ensaio Geral por Família</option>
+              <option value="Ensaio Geral por Categoria">Ensaio Geral por Categoria</option>
+            </select>
+            <button type="button" id="mus-ensaio-addtype-btn" class="btn btn-outline-primary btn-sm" title="Adicionar outro tipo">+</button>
+          </div>
+        </label>
+        <label>
+          Data
+          <input type="date" id="mus-ensaio-data" name="data" required />
+        </label>
+        <label>
+          Horário
+          <input type="time" id="mus-ensaio-hora" name="horario" />
+        </label>
+        <label class="full">
+          Observações
+          <textarea id="mus-ensaio-obs" name="observacoes" rows="3" placeholder="Detalhes, observações..."></textarea>
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Salvar Ensaio</button>
+          <button type="reset" class="btn btn-outline-secondary">Limpar</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Cadastro de Pessoas do Musical -->
+    <section class="card shadow-sm p-3 mb-3">
+      <h2>Cadastro de Pessoas (Musical)</h2>
+      <form id="form-musical-pessoa" class="form-grid">
+        <label>
+          Nome
+          <input type="text" id="mus-pessoa-nome" name="nome" required />
+        </label>
+        <label>
+          Categoria/Cargo
+          <select id="mus-pessoa-categoria" name="categoria" required>
+            <option value="">Selecionar...</option>
+            <option value="Encarregado Regional">Encarregado Regional</option>
+            <option value="Encarregado Local">Encarregado Local</option>
+            <option value="Examinadora">Examinadora</option>
+            <option value="Instrutor">Instrutor</option>
+          </select>
+        </label>
+        <label>
+          Congregação
+          <select id="mus-pessoa-congregacao" name="congregacaoId">
+            <option value="">Selecionar...</option>
+          </select>
+        </label>
+        <label id="mus-instrumento-wrap" class="hidden">
+          Instrumento
+          <input type="text" id="mus-instrumento" name="instrumento" placeholder="Ex.: Violino, Trompete..." />
+        </label>
+        <label id="mus-tonalidade-wrap" class="hidden">
+          Tonalidade
+          <input type="text" id="mus-tonalidade" name="tonalidade" placeholder="Ex.: Bb, Eb, C..." />
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Salvar Pessoa</button>
+          <button type="reset" class="btn btn-outline-secondary">Limpar</button>
+        </div>
+      </form>
+      <div class="mt-3">
+        <h4 class="meta">Pessoas do Musical Cadastradas</h4>
+        <div id="lista-musical-pessoas" class="list"></div>
+      </div>
+    </section>
+
+    <!-- Agenda de Ensaios -->
+    <section class="card shadow-sm p-3 mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="mb-0">Agenda de Ensaios</h2>
+        <div class="d-flex align-items-center">
+          <label for="mus-agenda-year" class="mb-0 me-2">Ano</label>
+          <select id="mus-agenda-year" class="form-select form-select-sm" style="width:auto"></select>
+          <label for="mus-agenda-month" class="mb-0 ms-3 me-2">Mês</label>
+          <select id="mus-agenda-month" class="form-select form-select-sm" style="width:auto"></select>
+          <button type="button" id="btn-musical-imprimir-calendario" class="btn btn-sm btn-outline-primary ms-3">Imprimir Calendário Anual</button>
+        </div>
+      </div>
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Horário</th>
+            <th>Local</th>
+            <th>Tipo</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="mus-agenda-body">
+          <tr><td colspan="5" class="text-muted">Nenhum ensaio cadastrado</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
