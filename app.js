@@ -281,6 +281,17 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
   const musEnsaioHoraInp = qs('#mus-ensaio-hora');
   const musEnsaioObsTxt = qs('#mus-ensaio-obs');
 
+  // Seletores da Agenda Musical (declarar ANTES de uso)
+  const musAgendaYearSel = qs('#mus-agenda-year');
+  const musAgendaMonthSel = qs('#mus-agenda-month');
+  const musAgendaBody = qs('#mus-agenda-body');
+  const btnMusImprimirCalendario = qs('#btn-musical-imprimir-calendario');
+
+  // Seletores da Agenda Musical (declarar antes de uso)
+  // Bloco de seletores do cadastro de pessoas
+
+
+
   // Novos seletores de recorrência (agenda de ensaios)
   const musRecAnoSel = qs('#mus-rec-ano');
   const musRecDiaSel = qs('#mus-rec-dia');
@@ -549,11 +560,6 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
   const musInstrumentoInp = qs('#mus-instrumento');
   const musTonalidadeInp = qs('#mus-tonalidade');
   const listaMusicalPessoas = qs('#lista-musical-pessoas');
-
-  const musAgendaYearSel = qs('#mus-agenda-year');
-  const musAgendaMonthSel = qs('#mus-agenda-month');
-  const musAgendaBody = qs('#mus-agenda-body');
-  const btnMusImprimirCalendario = qs('#btn-musical-imprimir-calendario');
 
   // Inicialização da aba Musical: preencher congregações e selects
   (function initMusical(){
