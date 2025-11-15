@@ -295,7 +295,14 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
   let congregacoesByIdEvents = {};
   let resultadosCache = [];
 
-
+  // Helper: obter label da congregação com fallback
+  function labelCong(obj){
+    const congId = obj && obj.congregacaoId ? obj.congregacaoId : null;
+    const nomeCache = congId && congregacoesByIdEvents[congId] ? (congregacoesByIdEvents[congId].nome || '') : '';
+    const nome = nomeCache || (obj && obj.congregacaoNome) || '';
+    if (nome) return nome;
+    return congId ? `Congregação ${congId}` : 'Congregação';
+  }
 
   // Novos seletores de recorrência (agenda de ensaios)
   const musRecAnoSel = qs('#mus-rec-ano');
