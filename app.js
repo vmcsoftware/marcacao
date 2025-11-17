@@ -391,6 +391,7 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
   const musRecDiaSel = qs('#mus-rec-dia');
   const musRecSemanaSel = qs('#mus-rec-semana');
   const musRecMesesWrap = qs('#mus-rec-meses');
+  const musRecPreviewBody = qs('#mus-rec-preview-body');
 
   // Helpers de data para recorrência de ensaios
   function toYmdLocal(d){
@@ -413,6 +414,40 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
     const day = last.getDate() - offset;
     const cand = new Date(year, month-1, day);
     return toYmdLocal(cand);
+  }
+
+  // Renderização do preview de recorrência
+  function renderRecorrenciaPreview(){
+    if(!musRecPreviewBody) return;
+    const recAno = musRecAnoSel && musRecAnoSel.value ? parseInt(musRecAnoSel.value,10) : null;
+    const recDia = musRecDiaSel && musRecDiaSel.value !== '' ? parseInt(musRecDiaSel.value,10) : null; // 0..6
+    const recSemana = musRecSemanaSel && musRecSemanaSel.value ? musRecSemanaSel.value : null; // '1'..'5' | 'last'
+    const recMeses = musRecMesesWrap ? Array.from(musRecMesesWrap.querySelectorAll('input[name="mus-rec-meses"]:checked')).map(i=>parseInt(i.value,10)) : [];
+
+    if(!(recAno && recDia!==null && recSemana && recMeses.length)){
+      musRecPreviewBody.innerHTML = '<tr><td class="text-muted">Selecione Ano, Dia, Semana e Meses</td></tr>';
+      return;
+    }
+
+    let datas = recMeses.map(m => {
+      if(recSemana === 'last') return getLastWeekdayOfMonth(recAno, m, recDia);
+      const nth = parseInt(recSemana,10);
+      return getNthWeekdayOfMonth(recAno, m, recDia, nth);
+    }).filter(Boolean);
+
+    // Ordenar por data
+    datas = datas.slice().sort((a,b)=>{
+      const ad = parseDateYmdLocal(a) || new Date(a);
+      const bd = parseDateYmdLocal(b) || new Date(b);
+      return ad - bd;
+    });
+
+    if(!datas.length){
+      musRecPreviewBody.innerHTML = '<tr><td class="text-muted">Nenhuma data encontrada para a recorrência selecionada</td></tr>';
+      return;
+    }
+
+    musRecPreviewBody.innerHTML = datas.map(d => `<tr><td>${formatDate(d)}</td></tr>`).join('');
   }
 
   // Tipos de Ensaio customizados (localStorage) para Musical
@@ -720,7 +755,18 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
         </label>`;
       }).join('');
     }
+
+    // Render inicial do preview de recorrência
+    try{ renderRecorrenciaPreview(); }catch{}
   })();
+
+  // Atualizar preview quando os campos mudam
+  if(musRecAnoSel) musRecAnoSel.addEventListener('change', ()=>{ try{ renderRecorrenciaPreview(); }catch{} });
+  if(musRecDiaSel) musRecDiaSel.addEventListener('change', ()=>{ try{ renderRecorrenciaPreview(); }catch{} });
+  if(musRecSemanaSel) musRecSemanaSel.addEventListener('change', ()=>{ try{ renderRecorrenciaPreview(); }catch{} });
+  if(musRecMesesWrap) musRecMesesWrap.addEventListener('change', (e)=>{ 
+    if(e.target && e.target.name==='mus-rec-meses'){ try{ renderRecorrenciaPreview(); }catch{} } 
+  });
 
   // Resultados: Santa Ceia e Batismos
   const resultadosForm = qs('#form-resultados');
