@@ -672,6 +672,8 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
   const musTonalidadeWrap = qs('#mus-tonalidade-wrap');
   const musInstrumentoInp = qs('#mus-instrumento');
   const musTonalidadeInp = qs('#mus-tonalidade');
+  // Datalist da Agenda 2026 (autocompletar congregações)
+  const agenda2026CongList = qs('#agenda2026-congregacoes-list');
   const listaMusicalPessoas = qs('#lista-musical-pessoas');
 
   try{ renderMusPessoas(); }catch{}
@@ -695,7 +697,7 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
 
   // Inicialização da aba Musical: preencher congregações e selects
   (function initMusical(){
-    if (musCongSel || musPessoaCongSel) {
+    if (musCongSel || musPessoaCongSel || agenda2026CongList) {
       readList('congregacoes', list => {
         // Atualiza caches globais usados em eventos e agenda musical
         congregacoesCacheEvents = (list || []).slice().sort((a, b) => (a && a.nome ? a.nome : '').localeCompare(b && b.nome ? b.nome : '', undefined, { sensitivity: 'base' }));
@@ -708,6 +710,13 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
 
         if (musCongSel) musCongSel.innerHTML = optsHtml;
         if (musPessoaCongSel) musPessoaCongSel.innerHTML = optsHtml;
+
+        // Popular datalist da Agenda 2026 com nomes (autocompletar pelo nome)
+        if (agenda2026CongList) {
+          agenda2026CongList.innerHTML = congregacoesCacheEvents
+            .map(c => `<option value="${c.nome}"></option>`)
+            .join('');
+        }
 
         // Re-renderiza a agenda após o carregamento das congregações
         if (musAgendaBody) renderMusAgenda();
@@ -772,6 +781,21 @@ const btnRelServicoImportTest = qs('#rel-servico-import-test');
   const resultadosForm = qs('#form-resultados');
   const resultadoTipoSel = qs('#resultado-tipo');
   const resultadoCongSel = qs('#resultado-congregacao');
+  // Popular select de congregação em Relatórios
+  if (resultadoCongSel) {
+    readList('congregacoes', list => {
+      congregacoesCacheEvents = (list || [])
+        .slice()
+        .sort((a, b) => (a && a.nome ? a.nome : '').localeCompare(b && b.nome ? b.nome : '', undefined, { sensitivity: 'base' }));
+      congregacoesByIdEvents = {};
+      congregacoesCacheEvents.forEach(c => { if (c && c.id) congregacoesByIdEvents[c.id] = c; });
+
+      const optsHtml = ['<option value="">Selecione</option>']
+        .concat(congregacoesCacheEvents.map(c => `<option value="${c.id}">${c.nome}</option>`))
+        .join('');
+      resultadoCongSel.innerHTML = optsHtml;
+    });
+  }
   const resultadoDataInput = qs('#resultado-data');
   const resultadoAtendenteInput = qs('#resultado-atendente');
   const resultadoIrmaosInput = qs('#resultado-irmaos');
