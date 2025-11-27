@@ -11,7 +11,7 @@ import {
   deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// Config do seu projeto (sem crases/espacos no databaseURL)
+// Config do seu projeto (sem crases/espacos)
 const firebaseConfig = {
   apiKey: "AIzaSyC8sclCXI8PgirqJXi65g2l0tHy288wrSc",
   authDomain: "marcacao-79921.firebaseapp.com",
@@ -23,9 +23,10 @@ const firebaseConfig = {
   measurementId: "G-1362LZG6BP"
 };
 
+// Inicializa App
 const app = initializeApp(firebaseConfig);
 
-// Analytics em HTTPS/produção; ignore erros locais
+// Analytics pode falhar fora de HTTPS; proteja com try/catch
 let analytics;
 try { analytics = getAnalytics(app); } catch {}
 
